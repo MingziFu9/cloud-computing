@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serverless 与云服务器费用对比</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.ctl { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:2px 14px; }
+.ctl .row span:first-child { width:7.5em; font-size:13px; }
+svg { width:100%; height:auto; display:block; }
+.res { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+.res .box { margin:0; text-align:center; padding:8px; }
+.res b { display:block; font-size:20px; margin-top:2px; }
+.res .win { border-color:#43a047; background:#f1f8e9; }
+.ex button { font-size:12.5px; }
+</style>
+</head>
+<body>
+<h1>Serverless 与云服务器：哪种更省钱？</h1>
+<div class="sub">同一个小程序后端，可以租一台云服务器全天运行（包月），也可以写成函数部署到函数计算，<b>没有请求时不收费</b>，按调用次数和执行时间计费。调整业务量，看看两者的月费用。</div>
+<div class="row ex"><span style="font-size:13px">典型场景：</span><button data-p="300,200,256">个人博客评论接口</button><button data-p="20000,150,512">校园小程序</button><button data-p="2000000,100,512">高流量电商接口</button></div>
+<div class="ctl">
+  <div class="row"><span>每天请求数</span><input type="range" id="req" min="0" max="70" value="30"><b class="mono" id="reqv"></b></div>
+  <div class="row"><span>每次执行时间</span><input type="range" id="dur" min="20" max="2000" step="10" value="200"><b class="mono" id="durv"></b></div>
+  <div class="row"><span>函数内存</span><select id="mem"><option value="128">128 MB</option><option value="256">256 MB</option><option value="512" selected>512 MB</option><option value="1024">1 GB</option><option value="2048">2 GB</option></select></div>
+  <div class="row"><span>云服务器包月</span><input type="range" id="ecs" min="50" max="600" step="10" value="150"><b class="mono" id="ecsv"></b></div>
+</div>
+<div class="res">
+  <div class="box" id="bF">函数计算（按量）<b id="cF"></b><span id="dF" style="font-size:12px;color:#607d8b"></span></div>
+  <div class="box" id="bE">云服务器（包月）<b id="cE"></b><span id="dE" style="font-size:12px;color:#607d8b"></span></div>
+</div>
+<svg id="chart" viewBox="0 0 640 230"></svg>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  // 示意单价（与国内主流函数计算公开报价同一数量级，实际以官网为准）
+  var P_CALL = 0.0133 / 10000;      // 元/次
+  var P_GBS = 0.00011108;           // 元/(GB·秒)
+  var FREE_CALL = 1000000, FREE_GBS = 400000;   // 每月免费额度（教学设定）
+  var CAP = 3000000;                // 一台 2 vCPU 云服务器每天大约能处理的请求数（教学设定）
+  function reqs() { var s = +document.getElementById("req").value; return s === 0 ? 0 : Math.round(Math.pow(10, 1 + s / 10)); }
+  function fc(perDay, dur, mem) {
+    var calls = perDay * 30, gbs = calls * dur / 1000 * mem / 1024;
+    return Math.max(0, calls - FREE_CALL) * P_CALL + Math.max(0, gbs - FREE_GBS) * P_GBS;
+  }
+  function ecs(perDay, price) { return Math.max(1, Math.ceil(perDay / CAP)) * price; }
+  function fmtN(n) { var r = function (x) { return x >= 10 ? Math.round(x) : Math.round(x * 10) / 10; }; return n >= 1e8 ? r(n / 1e8) + " 亿" : n >= 1e4 ? r(n / 1e4) + " 万" : String(Math.round(n)); }
+  function yuan(x) { return x < 0.01 ? "¥0" : x < 10 ? "¥" + x.toFixed(2) : "¥" + Math.round(x).toLocaleString(); }
+  var svg = document.getElementById("chart");
+  function el(t, a, txt) { var e = document.createElementNS("http://www.w3.org/2000/svg", t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+  function update() {
+    var n = reqs(), dur = +document.getElementById("dur").value, mem = +document.getElementById("mem").value, price = +document.getElementById("ecs").value;
+    document.getElementById("reqv").textContent = fmtN(n) + " 次";
+    document.getElementById("durv").textContent = dur + " ms";
+    document.getElementById("ecsv").textContent = "¥" + price + "/月";
+    var cF = fc(n, dur, mem), cE = ecs(n, price);
+    document.getElementById("cF").textContent = yuan(cF) + "/月";
+    document.getElementById("cE").textContent = yuan(cE) + "/月";
+    var gbs = n * 30 * dur / 1000 * mem / 1024;
+    document.getElementById("dF").textContent = "月调用 " + fmtN(n * 30) + " 次，资源用量 " + fmtN(Math.round(gbs)) + " GB·秒";
+    document.getElementById("dE").textContent = "需要 " + Math.max(1, Math.ceil(n / CAP)) + " 台，不管有没有请求都全天计费";
+    document.getElementById("bF").className = "box" + (cF <= cE ? " win" : "");
+    document.getElementById("bE").className = "box" + (cE < cF ? " win" : "");
+    // 图：横轴每天请求数（对数），纵轴月费用
+    svg.innerHTML = "";
+    var X0 = 50, X1 = 625, Y0 = 195, Y1 = 15, lo = 1, hi = 7.5;
+    var xs = [];
+    for (var i = 0; i <= 130; i++) { var lg = lo + (hi - lo) * i / 130, r = Math.pow(10, lg); xs.push([lg, fc(r, dur, mem), ecs(r, price)]); }
+    var top = Math.ceil(Math.log10(Math.max(xs[xs.length - 1][1], xs[xs.length - 1][2], 100)));
+    function X(lg) { return X0 + (lg - lo) / (hi - lo) * (X1 - X0); }
+    function Y(c) { return Y0 - Math.max(0, Math.log10(Math.max(c, 1))) / top * (Y0 - Y1); }   // 纵轴对数刻度，1 元以下画在底线
+    el("line", { x1: X0, y1: Y0, x2: X1, y2: Y0, stroke: "#90a4ae" }); el("line", { x1: X0, y1: Y0, x2: X0, y2: Y1, stroke: "#90a4ae" });
+    for (var k = 1; k <= 7; k++) { el("text", { x: X(k), y: Y0 + 14, "text-anchor": "middle", "font-size": 10.5, fill: "#607d8b" }, fmtN(Math.pow(10, k))); }
+    for (var t = 0; t <= top; t++) { el("line", { x1: X0, y1: Y(Math.pow(10, t)), x2: X1, y2: Y(Math.pow(10, t)), stroke: "#eceff1" }); el("text", { x: X0 - 5, y: Y(Math.pow(10, t)) + 4, "text-anchor": "end", "font-size": 10, fill: "#607d8b" }, t === 0 ? "≤¥1" : "¥" + fmtN(Math.pow(10, t))); }
+    el("text", { x: X1, y: Y0 + 28, "text-anchor": "end", "font-size": 11, fill: "#607d8b" }, "每天请求数（对数刻度）；纵轴为月费用（对数刻度）");
+    el("polyline", { points: xs.map(function (p) { return X(p[0]) + "," + Y(p[2]); }).join(" "), fill: "none", stroke: "#1e88e5", "stroke-width": 2.5 });
+    el("polyline", { points: xs.map(function (p) { return X(p[0]) + "," + Y(p[1]); }).join(" "), fill: "none", stroke: "#43a047", "stroke-width": 2.5 });
+    el("text", { x: X(2), y: Y(xs[0][2]) - 6, "font-size": 12, fill: "#1e88e5" }, "云服务器");
+    el("text", { x: X(4.6), y: Y0 - 6, "font-size": 12, fill: "#43a047" }, "函数计算");
+    // 交点
+    var cross = null;
+    for (var j = 1; j < xs.length; j++) if (xs[j - 1][1] <= xs[j - 1][2] && xs[j][1] > xs[j][2]) { cross = xs[j][0]; break; }
+    if (cross) { el("line", { x1: X(cross), y1: Y0, x2: X(cross), y2: Y1, stroke: "#ffb300", "stroke-dasharray": "4 3" }); el("text", { x: X(cross) + 4, y: Y1 + 12, "font-size": 11, fill: "#ef6c00" }, "临界点 ≈ 每天 " + fmtN(Math.round(Math.pow(10, cross))) + " 次"); }
+    if (n > 0) { var lgn = Math.log10(Math.max(10, n)); el("circle", { cx: X(lgn), cy: Y(cF), r: 5, fill: "#43a047" }); el("circle", { cx: X(lgn), cy: Y(cE), r: 5, fill: "#1e88e5" }); }
+    var m;
+    if (n === 0) m = "没有请求时，函数计算一分钱不花，云服务器照样按月收费：这就是 Serverless 的<b>按需计费</b>。";
+    else if (cF <= cE) m = "业务量较小或时有时无时，函数计算更省钱" + (cF === 0 ? "（还在免费额度内）" : "") + "。同时不用管服务器的安装、打补丁和扩容。";
+    else m = "请求量大且持续稳定时，按调用计费累积起来会超过包月的云服务器，这时云服务器（或预留资源）更划算。选型要看业务特点，不是“新技术一定更便宜”。";
+    if (dur >= 1000 && n > 0) m += " 执行时间越长、内存越大，函数费用涨得越快，优化代码执行时间就是在省钱。";
+    document.getElementById("msg").innerHTML = m;
+  }
+  ["req", "dur", "mem", "ecs"].forEach(function (id) { document.getElementById(id).addEventListener("input", update); });
+  document.querySelectorAll(".ex button").forEach(function (b) { b.onclick = function () {
+    var p = b.dataset.p.split(",").map(Number);
+    document.getElementById("req").value = Math.round((Math.log10(p[0]) - 1) * 10);
+    document.getElementById("dur").value = p[1]; document.getElementById("mem").value = p[2]; update(); }; });
+  update();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

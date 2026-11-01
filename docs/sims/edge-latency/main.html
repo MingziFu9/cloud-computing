@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>边缘计算与云端计算对比</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.ctl { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:2px 14px; }
+.ctl .row span:first-child { width:7.5em; font-size:13px; }
+.cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+@media (max-width:620px) { .cols { grid-template-columns:1fr; } }
+.col { border:2px solid #90caf9; border-radius:8px; padding:8px 10px; }
+.col.edge { border-color:#a5d6a7; }
+.col h2 { font-size:15px; margin:0 0 6px; }
+.path { font-size:12.5px; color:#455a64; margin-bottom:6px; line-height:1.6; }
+.seg { display:flex; height:22px; border-radius:4px; overflow:hidden; background:#eceff1; margin:4px 0; }
+.seg div { height:100%; color:#fff; font-size:11px; line-height:22px; text-align:center; white-space:nowrap; overflow:hidden; }
+.kv { display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:13.5px; margin-top:6px; }
+.kv b { font-size:15px; }
+.bad { color:#c62828; } .good { color:#2e7d32; }
+.car { position:relative; height:34px; background:linear-gradient(#cfd8dc,#cfd8dc) 0 28px/100% 2px no-repeat; margin-top:6px; }
+.car .c { position:absolute; top:4px; font-size:20px; transform:scaleX(-1); }
+.car .stop { position:absolute; top:0; width:2px; height:30px; background:#e53935; }
+</style>
+</head>
+<body>
+<h1>边缘计算与云端计算：数据在哪里处理更好？</h1>
+<div class="sub">一个路口有若干路高清摄像头（每路 4 Mbps 视频），要识别闯红灯、行人横穿等异常。比较两种做法：<b>全部上传到云端识别</b>，还是<b>在路口的边缘节点就近识别</b>、只把异常片段传到云端。</div>
+<div class="ctl">
+  <div class="row"><span>摄像头数量</span><input type="range" id="cam" min="1" max="60" value="10"><b class="mono" id="camv"></b></div>
+  <div class="row"><span>上行带宽</span><input type="range" id="bw" min="20" max="500" step="10" value="100"><b class="mono" id="bwv"></b></div>
+  <div class="row"><span>车速（km/h）</span><input type="range" id="spd" min="20" max="120" step="10" value="60"><b class="mono" id="spdv"></b></div>
+  <div class="row"><label style="font-size:13.5px"><input type="checkbox" id="off"> 模拟到云端的网络中断</label></div>
+</div>
+<div class="cols">
+  <div class="col">
+    <h2>☁️ 全部上传云端处理</h2>
+    <div class="path">摄像头 → 接入网 → 骨干网 → 云数据中心识别 → 结果原路返回</div>
+    <div class="seg" id="segC"></div>
+    <div class="kv" id="kvC"></div>
+    <div class="car" id="carC"></div>
+  </div>
+  <div class="col edge">
+    <h2>📡 边缘节点就近处理</h2>
+    <div class="path">摄像头 → 路口边缘节点识别 → 直接控制信号灯；只把异常片段传云端</div>
+    <div class="seg" id="segE"></div>
+    <div class="kv" id="kvE"></div>
+    <div class="car" id="carE"></div>
+  </div>
+</div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var RATE = 4, ABN = 0.02;   // 每路 4 Mbps；异常片段约占 2%
+  function v(id) { return +document.getElementById(id).value; }
+  function bar(el, parts) {
+    var tot = parts.reduce(function (s, p) { return s + p[1]; }, 0), max = Math.max(tot, 120);
+    el.innerHTML = parts.map(function (p) { return '<div style="width:' + (p[1] / max * 100) + '%;background:' + p[2] + '" title="' + p[0] + ' ' + p[1].toFixed(0) + ' ms">' + (p[1] / max > 0.12 ? p[0] : '') + '</div>'; }).join("");
+    return tot;
+  }
+  function car(el, ms, kmh, fail) {
+    var d = kmh / 3.6 * ms / 1000;          // 反应时间内行驶的距离（米）
+    var px = Math.min(92, 4 + d / 4 * 88);  // 4 米画满
+    el.innerHTML = fail ? '<span style="font-size:13px" class="bad">网络中断，云端收不到画面，无法预警</span>'
+      : '<div class="stop" style="left:4%"></div><div class="c" style="left:' + px + '%">🚗</div><span style="position:absolute;right:0;top:0;font-size:12px;color:#546e7a">发出预警前车辆已驶出 ' + d.toFixed(2) + ' 米</span>';
+    return d;
+  }
+  function update() {
+    var n = v("cam"), bw = v("bw"), kmh = v("spd"), off = document.getElementById("off").checked;
+    document.getElementById("camv").textContent = n + " 路";
+    document.getElementById("bwv").textContent = bw + " Mbps";
+    document.getElementById("spdv").textContent = kmh;
+    // 云端：上行需求 n×4 Mbps，利用率越高排队越久（M/M/1 近似），超过带宽则画面积压
+    var needC = n * RATE, uC = needC / bw;
+    var queueC = uC >= 1 ? 2000 : 8 * uC / (1 - uC);
+    var segsC = [["接入网", 5, "#78909c"], ["排队", Math.min(queueC, 600), "#ef6c00"], ["骨干网", 25, "#5c6bc0"], ["云端识别", 20, "#1e88e5"], ["返回", 30, "#7986cb"]];
+    var tC = bar(document.getElementById("segC"), segsC);
+    if (uC >= 1) tC = Infinity;
+    // 边缘：识别在本地，上行只传 2% 异常片段
+    var needE = n * RATE * ABN, uE = needE / bw;
+    var tE = bar(document.getElementById("segE"), [["到边缘", 2, "#78909c"], ["边缘识别", 15, "#43a047"], ["返回", 2, "#81c784"]]);
+    var fmt = function (t) { return t === Infinity ? '<b class="bad">画面积压，无法实时</b>' : '<b>' + t.toFixed(0) + ' ms</b>'; };
+    document.getElementById("kvC").innerHTML =
+      '<span>响应延迟</span>' + (off ? '<b class="bad">无响应</b>' : fmt(tC)) +
+      '<span>上行流量</span><b class="' + (uC >= 1 ? 'bad' : '') + '">' + needC.toFixed(0) + ' Mbps（占带宽 ' + Math.round(uC * 100) + '%）</b>' +
+      '<span>断网时</span><b class="bad">停止工作</b>';
+    document.getElementById("kvE").innerHTML =
+      '<span>响应延迟</span><b class="good">' + tE.toFixed(0) + ' ms</b>' +
+      '<span>上行流量</span><b>' + needE.toFixed(1) + ' Mbps（占带宽 ' + Math.max(1, Math.round(uE * 100)) + '%）</b>' +
+      '<span>断网时</span><b class="good">本地继续工作，恢复后补传</b>';
+    var dC = car(document.getElementById("carC"), Math.min(tC, 3000), kmh, off || tC === Infinity);
+    var dE = car(document.getElementById("carE"), tE, kmh, false);
+    var m;
+    if (off) m = "网络中断时，依赖云端的方案完全失效；边缘节点有<b>离线运行能力</b>，信号灯照常智能控制，网络恢复后再把异常片段补传到云端。";
+    else if (uC >= 1) m = n + " 路视频需要 " + needC + " Mbps，超过了 " + bw + " Mbps 的上行带宽，画面越积越多。边缘方案只上传异常片段，流量减少约 98%：这就是边缘计算<b>节省带宽</b>的作用。";
+    else if (uC > 0.7) m = "上行带宽利用率超过 70%，排队延迟迅速变大。再增加几路摄像头试试。";
+    else m = "车速 " + kmh + " km/h 时，云端方案从发现异常到发出预警，车辆已行驶 " + dC.toFixed(2) + " 米；边缘方案只有 " + dE.toFixed(2) + " 米。对车联网、工业控制这类场景，几十毫秒的差别就很关键。";
+    document.getElementById("msg").innerHTML = m;
+  }
+  ["cam", "bw", "spd", "off"].forEach(function (id) { document.getElementById(id).addEventListener("input", update); });
+  update();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>
