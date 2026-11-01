@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>虚拟机与容器对比</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.col { border:1px solid var(--line); border-radius:8px; padding:8px; }
+.col h2 { font-size:14px; margin:0 0 6px; text-align:center; }
+.apps { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+.unit { display:flex; flex-direction:column-reverse; gap:2px; }
+.L { border-radius:4px; padding:3px 2px; font-size:11.5px; text-align:center; color:#fff; cursor:pointer; }
+.app { background:#43a047; } .lib { background:#7cb342; } .gos { background:#ef6c00; }
+.eng { background:#00897b; } .hyp { background:#8e24aa; } .hos { background:#5c6bc0; } .hw { background:#546e7a; }
+.L.dim { opacity:.25; }
+.stat { font-size:12.5px; margin-top:6px; }
+.stat b { font-variant-numeric:tabular-nums; }
+.prog { height:8px; background:#eceff1; border-radius:4px; overflow:hidden; margin:2px 0 4px; }
+.prog div { height:100%; width:0; background:var(--accent); }
+</style>
+</head>
+<body>
+<h1>虚拟机与容器：同样跑 3 个应用，差在哪里？</h1>
+<div class="sub">点“启动 3 个应用”比较两边的启动过程；点任意一层看它是什么。时间轴按比例缩短播放。</div>
+<div class="row"><button class="main" id="go">启动 3 个应用</button><button id="reset">重置</button></div>
+<div class="grid2">
+  <div class="col" id="vm"><h2>虚拟机</h2></div>
+  <div class="col" id="ct"><h2>容器</h2></div>
+</div>
+<div class="msg" id="msg">每台虚拟机都带一个完整的客户操作系统（橙色）；容器共用宿主机的操作系统内核，只带自己需要的库。</div>
+<div class="note">数据：容器一侧为编者在实验 2-2 中实测（nginx:1.27-alpine 镜像 74.5 MB，容器内存约 5 MB，创建并运行容器约 0.4 秒）；虚拟机一侧为常见 Linux 虚拟机的典型值（镜像数 GB、内存数百 MB 起、启动数十秒），因配置不同差别较大。</div>
+<script>
+(function () {
+  var INFO = {
+    app: "应用程序：例如网站、数据库。两边一样。",
+    lib: "依赖库：应用运行需要的库和运行环境，容器只打包这些。",
+    gos: "客户操作系统：每台虚拟机都要装一个完整的操作系统，启动它要几十秒，还要占几百 MB 内存。",
+    eng: "容器引擎（如 Docker）：负责创建、运行、管理容器。",
+    hyp: "Hypervisor：虚拟机管理程序，为每台虚拟机模拟一套硬件。",
+    hos: "宿主机操作系统：容器共享它的内核，所以容器里不需要再装一个操作系统。",
+    hw: "物理服务器硬件：CPU、内存、硬盘、网卡。"
+  };
+  var SPEC = {
+    vm: { units: ["app", "lib", "gos"], base: [["hyp", "Hypervisor"], ["hw", "硬件"]], boot: 40, mem: 3 * 512 + 15, disk: "3 × 约 2～10 GB", label: "虚拟机" },
+    ct: { units: ["app", "lib"], base: [["eng", "容器引擎"], ["hos", "宿主机操作系统"], ["hw", "硬件"]], boot: 0.4, mem: 3 * 5, disk: "共用一个 74.5 MB 镜像", label: "容器" }
+  };
+  var NAME = { app: "应用", lib: "库", gos: "客户 OS" };
+  function build(id) {
+    var s = SPEC[id], col = document.getElementById(id);
+    var apps = document.createElement("div"); apps.className = "apps";
+    for (var i = 0; i < 3; i++) {
+      var u = document.createElement("div"); u.className = "unit";
+      // column-reverse：先加的显示在下面
+      ["gos", "lib", "app"].forEach(function (k) { if (s.units.indexOf(k) >= 0) u.appendChild(layer(k, NAME[k] + (k === "app" ? " " + (i + 1) : ""))); });
+      apps.appendChild(u);
+    }
+    col.appendChild(apps);
+    s.base.forEach(function (b) { var d = layer(b[0], b[1]); d.style.marginTop = "2px"; col.appendChild(d); });
+    col.insertAdjacentHTML("beforeend", '<div class="stat">启动用时：<b id="' + id + 't">—</b><div class="prog"><div id="' + id + 'p"></div></div>内存占用：<b id="' + id + 'm">—</b><br>磁盘：<b>' + s.disk + "</b></div>");
+  }
+  function layer(k, txt) {
+    var d = document.createElement("div"); d.className = "L " + k; d.textContent = txt;
+    d.onclick = function () { document.getElementById("msg").textContent = INFO[k]; };
+    return d;
+  }
+  build("vm"); build("ct");
+  var timer = null;
+  function reset() {
+    clearInterval(timer);
+    ["vm", "ct"].forEach(function (id) { document.getElementById(id + "t").textContent = "—"; document.getElementById(id + "m").textContent = "—"; document.getElementById(id + "p").style.width = "0"; });
+    document.querySelectorAll(".L.app,.L.lib,.L.gos").forEach(function (d) { d.classList.add("dim"); });
+  }
+  document.getElementById("reset").onclick = reset;
+  document.getElementById("go").onclick = function () {
+    reset();
+    var t0 = Date.now(), SCALE = 10;   // 真实 1 秒 = 播放 0.1 秒
+    timer = setInterval(function () {
+      var real = (Date.now() - t0) / 1000 * SCALE, done = true;
+      ["vm", "ct"].forEach(function (id) {
+        var s = SPEC[id], f = Math.min(1, real / s.boot);
+        document.getElementById(id + "p").style.width = (f * 100) + "%";
+        document.getElementById(id + "t").textContent = f < 1 ? real.toFixed(1) + " 秒…" : (s.boot < 1 ? "约 " + s.boot + " 秒" : "约 " + s.boot + " 秒（典型值）");
+        document.getElementById(id + "m").textContent = Math.round(s.mem * f) + " MB" + (f < 1 ? "" : (id === "vm" ? "（典型值）" : "（实测）"));
+        document.querySelectorAll("#" + id + " .L.app, #" + id + " .L.lib, #" + id + " .L.gos").forEach(function (d) { if (f >= 1) d.classList.remove("dim"); });
+        if (f < 1) done = false;
+      });
+      if (done) { clearInterval(timer); document.getElementById("msg").textContent = "容器约 0.4 秒就全部启动，虚拟机要等客户操作系统开机。内存方面，3 台虚拟机光操作系统就要约 1.5 GB，3 个容器加起来约 15 MB。代价是容器共用内核，隔离性不如虚拟机。"; }
+    }, 50);
+  };
+  reset();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

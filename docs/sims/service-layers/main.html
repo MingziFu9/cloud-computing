@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>服务模式责任分层</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.stack { display:flex; flex-direction:column-reverse; gap:3px; max-width:460px; margin:8px auto 0; }
+.layer { display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-radius:6px; color:#fff; cursor:pointer; transition:background .35s; font-size:13.5px; }
+.layer small { opacity:.9; font-size:12px; }
+.u { background:#ef6c00; } .p { background:#3f51b5; } .s { background:repeating-linear-gradient(45deg,#ef6c00,#ef6c00 10px,#3f51b5 10px,#3f51b5 20px); }
+.key span { display:inline-flex; align-items:center; gap:4px; font-size:12px; margin-right:12px; }
+.key i { width:14px; height:14px; border-radius:3px; display:inline-block; }
+</style>
+</head>
+<body>
+<h1>服务模式责任分层：哪些层归云服务商管？</h1>
+<div class="sub">切换四种方式，看每一层由谁负责；点任意一层，看这一层具体要做什么。</div>
+<div class="row" id="modes"></div>
+<div class="row"><label><input type="checkbox" id="pizza"> 比萨的比喻</label></div>
+<div class="key"><span><i class="u"></i>用户自己负责</span><span><i class="p"></i>云服务商负责</span><span><i class="s"></i>双方共担</span></div>
+<div class="stack" id="stack"></div>
+<div class="msg" id="msg"></div>
+<div class="box" id="sum"></div>
+<script>
+(function () {
+  var MODES = ["本地部署", "IaaS", "PaaS", "SaaS"];
+  var PIZZA_MODES = ["在家自己做", "买半成品回家烤", "叫外卖", "去餐厅吃"];
+  // 从下到上；owner[i] = 每种方式下这一层归谁：u 用户、p 服务商、s 共担
+  var L = [
+    ["网络", "机房网络、交换机、带宽", "u p p p", "餐桌"],
+    ["存储", "磁盘阵列、备份设备", "u p p p", "燃气 / 电"],
+    ["服务器", "CPU、内存等物理硬件", "u p p p", "烤箱"],
+    ["虚拟化", "把物理机切成虚拟机的软件", "u p p p", "生火、预热"],
+    ["操作系统", "Linux / Windows 的安装和打补丁", "u u p p", "饼底"],
+    ["中间件", "Web 服务器、消息队列等", "u u p p", "番茄酱"],
+    ["运行环境", "Java、Python 等语言运行时", "u u p p", "奶酪和配料"],
+    ["应用", "网站、业务系统本身", "u u u p", "烤好、装盘"],
+    ["数据", "业务数据的内容和正确性", "u u u s", "饮料"],
+    ["账号与访问权限", "谁能登录、密码与权限设置", "u u u s", "谁来吃、吃多少"]
+  ];
+  var DESC = [
+    "所有东西都自己买、自己装、自己修。灵活，但前期投入大，还要专人运维。",
+    "云服务商提供虚拟机、存储和网络，用户从操作系统开始自己装、自己管。例如阿里云 ECS。",
+    "操作系统、中间件、运行环境都由平台管好，用户只管写应用、放数据。例如云数据库 RDS、应用托管平台。",
+    "软件是现成的，注册就能用，例如钉钉、在线文档。但数据内容和账号安全仍然要用户自己负责，这叫“安全责任共担”。"
+  ];
+  var mode = 1;
+  var mb = document.getElementById("modes");
+  MODES.forEach(function (m, i) { var b = document.createElement("button"); b.id = "m" + i; b.onclick = function () { mode = i; render(); }; mb.appendChild(b); });
+  document.getElementById("pizza").onchange = render;
+  function render() {
+    var pz = document.getElementById("pizza").checked;
+    MODES.forEach(function (m, i) { var b = document.getElementById("m" + i); b.textContent = pz ? PIZZA_MODES[i] : m; b.className = i === mode ? "on" : ""; });
+    var st = document.getElementById("stack"); st.innerHTML = "";
+    var cnt = { u: 0, p: 0, s: 0 };
+    L.forEach(function (l) {
+      var o = l[2].split(" ")[mode]; cnt[o]++;
+      var d = document.createElement("div"); d.className = "layer " + o;
+      d.innerHTML = "<b>" + (pz ? l[3] : l[0]) + "</b><small>" + (o === "u" ? "用户" : o === "p" ? "云服务商" : "共担") + "</small>";
+      d.onclick = function () {
+        var who = o === "u" ? "由你自己负责" : o === "p" ? "由云服务商负责" : "双方共担：平台保证系统安全可用，你负责内容和使用方式";
+        document.getElementById("msg").textContent = (pz ? l[3] + "（对应“" + l[0] + "”）" : l[0] + "：" + l[1]) + "。在" + MODES[mode] + "下" + who + "。";
+      };
+      st.appendChild(d);
+    });
+    document.getElementById("sum").innerHTML = "<h2>" + (pz ? PIZZA_MODES[mode] + " ≈ " : "") + MODES[mode] + "</h2>" + DESC[mode] +
+      '<div class="note">用户负责 ' + cnt.u + " 层，云服务商负责 " + cnt.p + " 层" + (cnt.s ? "，共担 " + cnt.s + " 层" : "") + "。</div>";
+    document.getElementById("msg").textContent = "";
+  }
+  render();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

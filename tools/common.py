@@ -37,6 +37,16 @@ def chapter_path(ch):
     return CHAPTERS / ch["dir"] / "index.md"
 
 
+def chapter_pages(ch):
+    """一章的全部页面（按阅读顺序）：章首页、各节页、本章实验、本章小结与练习。
+    course.yml 里没写 pages 的章只有 index.md 一页（与系列其他教材相同）。"""
+    d = CHAPTERS / ch["dir"]
+    files = ["index.md"] + [p["file"] for p in ch.get("pages", [])]
+    if ch.get("pages"):
+        files += ["labs.md", "summary.md"]
+    return [d / f for f in files if (d / f).exists()]
+
+
 def safe_name(s):
     """去掉文件名里不能用的字符"""
     return re.sub(r'[\\/:*?"<>|]', "", s)
@@ -78,7 +88,7 @@ def replace_between(text, start, end, block):
 # ---------- 读章节内容（课件、教案、导出共用） ----------
 
 def chapter_text(ch):
-    return front_matter(chapter_path(ch).read_text(encoding="utf-8"))[1]
+    return "\n\n".join(front_matter(p.read_text(encoding="utf-8"))[1] for p in chapter_pages(ch))
 
 
 def plain(s):

@@ -1,4 +1,4 @@
-# 课程名称
+# 云计算及应用
 
 **面向成人教育人工智能技术应用专业（专科）的《课程名称》教材**
 
@@ -6,9 +6,7 @@
 
 <!-- course:start -->
 !!! abstract "课程信息"
-    4 学分 · 72 学时（理论 60 学时 + 实验 12 学时） · 第 3 学期 · 1 章 · 3 个实验 · 期末闭卷
-
-    对应证书：证书名称（级别）
+    2 学分 · 36 学时（理论 28 学时 + 实验 8 学时） · 第 3 学期 · 5 章 · 13 个实验 · 期末闭卷
 <!-- course:end -->
 
 ## 这本书讲什么
@@ -41,9 +39,13 @@
 <!-- toc:start -->
 | 章节 | 实验 |
 |---|---|
-| [第 1 章 示例章](chapters/01-sample/index.md) | 实验 1-1 ★ 示例实验 |
+| [第 1 章 云计算基础](chapters/01-cloud-basics/index.md) | — |
+| [第 2 章 云计算核心技术](chapters/02-core-technologies/index.md) | — |
+| [第 3 章 云计算平台与工具](chapters/03-platforms-tools/index.md) | — |
+| [第 4 章 云计算应用与实践](chapters/04-applications/index.md) | — |
+| [第 5 章 未来趋势与职业发展](chapters/05-trends-careers/index.md) | — |
 
-附录：[A Python 速查](appendix/a-python.md) · [B 工具库速查](appendix/b-libraries.md) · [C 实验环境与数据说明](appendix/c-environment.md) · [D 术语表](appendix/glossary.md)
+附录：[A 实验环境准备](appendix/a-labs-env.md) · [B 常用命令速查](appendix/b-commands.md) · [C 参考文献](appendix/c-references.md) · [D 术语表](appendix/glossary.md)
 <!-- toc:end -->
 
 ## 配套资源

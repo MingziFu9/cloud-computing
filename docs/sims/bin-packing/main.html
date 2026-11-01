@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>资源调度装箱</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.vms { display:flex; flex-wrap:wrap; gap:6px; min-height:40px; }
+.vm { padding:4px 8px; border-radius:6px; color:#fff; cursor:pointer; font-size:13px; border:2px solid transparent; user-select:none; }
+.vm.sel { border-color:#263238; box-shadow:0 0 0 2px #fff inset; }
+.hosts { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-top:8px; }
+.host { border:2px dashed var(--line); border-radius:8px; padding:6px; cursor:pointer; min-height:150px; display:flex; flex-direction:column; }
+.host.can { border-color:var(--accent); }
+.host .t { font-size:12px; color:var(--muted); display:flex; justify-content:space-between; }
+.slots { flex:1; display:flex; flex-direction:column-reverse; gap:2px; margin-top:4px; }
+.slot { border-radius:4px; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; }
+.host.empty { opacity:.55; }
+</style>
+</head>
+<body>
+<h1>资源调度装箱：怎样用最少的服务器放下所有虚拟机？</h1>
+<div class="sub">每台物理服务器有 8 个 CPU 核。先点一台虚拟机（如“VM3 · 1 核”），再点一台服务器放进去；放不下的服务器不会亮。也可以直接点下面的按钮，让调度算法自动放。</div>
+<div class="box"><h2>待放置的虚拟机</h2><div class="vms" id="vms"></div></div>
+<div class="row">
+  <button class="main" id="ff">首次适应（按顺序，放进第一台装得下的）</button>
+  <button class="main" id="bfd">最佳适应递减（先放大的，放进剩余最少的）</button>
+  <button id="reset">重来</button>
+  <button id="shuffle">换一批虚拟机</button>
+</div>
+<div class="hosts" id="hosts"></div>
+<div class="msg" id="msg"></div>
+<table class="t" id="rec"><tr><th>做法</th><th>用了几台服务器</th><th>平均利用率</th></tr></table>
+<script>
+(function () {
+  var CAP = 8, COLORS = ["#3f51b5","#00897b","#ef6c00","#8e24aa","#c62828","#2e7d32","#6d4c41","#1565c0","#ad1457","#455a64"];
+  var batch = [4,4,1,2,2,5,3,6,5], vms, hosts, sel = null, mode = "手动";
+  function init(sizes) {
+    vms = sizes.map(function (s, i) { return { id: i + 1, size: s, color: COLORS[i % COLORS.length], host: -1 }; });
+    hosts = []; for (var i = 0; i < 6; i++) hosts.push([]);
+    sel = null; mode = "手动"; render();
+  }
+  function used(h) { return hosts[h].reduce(function (a, v) { return a + v.size; }, 0); }
+  function place(v, h) { v.host = h; hosts[h].push(v); }
+  function render() {
+    var box = document.getElementById("vms"); box.innerHTML = "";
+    vms.filter(function (v) { return v.host < 0; }).forEach(function (v) {
+      var d = document.createElement("span"); d.className = "vm" + (sel === v ? " sel" : "");
+      d.style.background = v.color; d.textContent = "VM" + v.id + " · " + v.size + " 核";
+      d.onclick = function () { sel = sel === v ? null : v; render(); };
+      box.appendChild(d);
+    });
+    if (!box.children.length) box.innerHTML = '<span class="note">全部放好了。</span>';
+    var hb = document.getElementById("hosts"); hb.innerHTML = "";
+    hosts.forEach(function (list, h) {
+      var u = used(h), d = document.createElement("div");
+      d.className = "host" + (list.length ? "" : " empty") + (sel && u + sel.size <= CAP ? " can" : "");
+      d.innerHTML = '<div class="t"><b>服务器 ' + (h + 1) + '</b><span>' + u + ' / ' + CAP + ' 核</span></div>';
+      var slots = document.createElement("div"); slots.className = "slots";
+      list.forEach(function (v) { var s = document.createElement("div"); s.className = "slot"; s.style.background = v.color; s.style.height = (v.size * 15) + "px"; s.textContent = "VM" + v.id; slots.appendChild(s); });
+      d.appendChild(slots);
+      d.onclick = function () {
+        if (!sel) return;
+        if (u + sel.size > CAP) { say("服务器 " + (h + 1) + " 只剩 " + (CAP - u) + " 核，放不下 " + sel.size + " 核的 VM" + sel.id + "。", true); return; }
+        place(sel, h); sel = null; render();
+      };
+      hb.appendChild(d);
+    });
+    var left = vms.filter(function (v) { return v.host < 0; }).length;
+    if (!left) summary(); else say(sel ? "选中了 VM" + sel.id + "（" + sel.size + " 核），蓝框的服务器放得下。" : "还剩 " + left + " 台虚拟机。", false);
+  }
+  function say(t, bad) { var m = document.getElementById("msg"); m.textContent = t; m.className = "msg" + (bad ? " bad" : ""); }
+  function summary() {
+    var n = hosts.filter(function (l) { return l.length; }).length;
+    var total = vms.reduce(function (a, v) { return a + v.size; }, 0);
+    var util = total / (n * CAP) * 100, best = Math.ceil(total / CAP);
+    say(mode + "：用了 " + n + " 台服务器，平均利用率 " + util.toFixed(0) + "%。" + (n === best ? "这已经是最少的台数了（总共 " + total + " 核，至少要 " + best + " 台）。" : "理论上最少只要 " + best + " 台，还能更省。"), n !== best);
+    var tr = document.createElement("tr"); tr.innerHTML = "<td>" + mode + "</td><td>" + n + "</td><td>" + util.toFixed(0) + "%</td>";
+    document.getElementById("rec").appendChild(tr);
+  }
+  function auto(kind) {
+    init(batch); mode = kind === "ff" ? "首次适应" : "最佳适应递减";
+    var order = vms.slice(); if (kind === "bfd") order.sort(function (a, b) { return b.size - a.size; });
+    order.forEach(function (v) {
+      var pick = -1;
+      for (var h = 0; h < hosts.length; h++) {
+        var free = CAP - used(h);
+        if (free < v.size) continue;
+        if (kind === "ff") { pick = h; break; }
+        if (pick < 0 || free < CAP - used(pick)) pick = h;
+        if (!hosts[h].length) break;   // 空服务器只在必要时启用
+      }
+      place(v, pick);
+    });
+    render();
+  }
+  document.getElementById("ff").onclick = function () { auto("ff"); };
+  document.getElementById("bfd").onclick = function () { auto("bfd"); };
+  document.getElementById("reset").onclick = function () { init(batch); };
+  document.getElementById("shuffle").onclick = function () {
+    batch = []; for (var i = 0; i < 9; i++) batch.push(1 + Math.floor(Math.random() * 6));
+    document.getElementById("rec").innerHTML = "<tr><th>做法</th><th>用了几台服务器</th><th>平均利用率</th></tr>";
+    init(batch);
+  };
+  init(batch);
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

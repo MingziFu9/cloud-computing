@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三种桌面云架构</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.dia { display:grid; grid-template-columns:1fr 70px 1fr; align-items:center; gap:4px; margin:8px 0; }
+.node { border:2px solid var(--line); border-radius:10px; padding:8px; text-align:center; font-size:12.5px; min-height:110px; }
+.node h2 { font-size:13px; margin:0 0 4px; }
+.os { margin-top:6px; padding:4px; border-radius:6px; background:#3f51b5; color:#fff; }
+.os.off { background:#eceff1; color:#90a4ae; }
+.screen { margin-top:6px; padding:6px; border-radius:6px; background:#263238; color:#a5d6a7; font-size:12px; }
+.screen.black { color:#ef9a9a; }
+.link { text-align:center; font-size:11px; color:var(--muted); }
+.link .ln { height:4px; background:var(--accent); border-radius:2px; margin:4px 0; }
+.link .ln.cut { background:repeating-linear-gradient(90deg,#e53935 0 6px,transparent 6px 12px); }
+table.t { width:100%; }
+table.t td.on { background:#e8eaf6; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>三种桌面云架构：桌面到底在哪里运行？</h1>
+<div class="sub">切换架构，看桌面操作系统在服务器还是终端上运行；再试试“断开网络”“换一台终端登录”“服务器故障”。</div>
+<div class="row"><button id="a0" class="on">VDI</button><button id="a1">IDV</button><button id="a2">VOI / TCI</button></div>
+<div class="dia">
+  <div class="node" id="srv"></div>
+  <div class="link" id="lnk"></div>
+  <div class="node" id="term"></div>
+</div>
+<div class="row"><button id="net">断开网络</button><button id="move">换一台终端登录</button><button id="down">服务器故障</button><button id="rs">恢复正常</button></div>
+<div class="msg" id="msg"></div>
+<table class="t" id="cmp"></table>
+<script>
+(function () {
+  var A = 0, net = true, srvOk = true, moved = false;
+  var NAME = ["VDI", "IDV", "VOI / TCI"];
+  var INFO = [
+    { srv: "桌面操作系统和数据都在这里运行、保存", term: "瘦终端：只显示画面、传键盘鼠标", runOnSrv: true },
+    { srv: "集中管理桌面镜像，下发到终端", term: "胖终端：桌面操作系统在本地虚拟机里运行", runOnSrv: false },
+    { srv: "集中管理系统镜像，终端从网络启动", term: "胖终端：系统从网络启动后直接在本地硬件上运行", runOnSrv: false }
+  ];
+  var ROWS = [
+    ["计算在哪里", "服务器", "本地终端", "本地终端"],
+    ["终端类型", "瘦终端", "胖终端", "胖终端"],
+    ["断网能否使用", "不能", "能", "能"],
+    ["移动性（换终端看到同一桌面）", "好", "较差", "较差"],
+    ["数据安全", "强（数据不落地）", "较差", "较差"],
+    ["服务器故障的影响", "所有桌面不可用", "已启动的终端不受影响", "已启动的终端不受影响"],
+    ["弹性资源、vGPU 切分", "支持", "无", "无"],
+    ["使用流畅度", "略差于传统 PC", "有一定性能损耗", "等同于传统 PC"]
+  ];
+  function render(msg) {
+    [0, 1, 2].forEach(function (i) { document.getElementById("a" + i).className = i === A ? "on" : ""; });
+    var I = INFO[A], usable = I.runOnSrv ? (net && srvOk) : true;
+    document.getElementById("srv").innerHTML = "<h2>云端服务器" + (srvOk ? "" : " ✘ 故障") + "</h2>" + I.srv + (I.runOnSrv ? '<div class="os' + (srvOk ? "" : " off") + '">Windows 桌面（运行中）</div>' : '<div class="os off">桌面镜像（存放）</div>');
+    document.getElementById("lnk").innerHTML = (I.runOnSrv ? "画面流 ⇄ 键鼠" : "镜像下发 / 同步") + '<div class="ln' + (net ? "" : " cut") + '"></div>' + (net ? "网络正常" : "网络断开");
+    document.getElementById("term").innerHTML = "<h2>" + (moved ? "另一台终端" : "用户终端") + "</h2>" + I.term + (!I.runOnSrv ? '<div class="os">Windows 桌面（运行中）</div>' : "") + '<div class="screen' + (usable ? "" : " black") + '">' + (usable ? "屏幕：正常使用桌面" : "屏幕：连接中断，无法使用") + "</div>";
+    var h = "<tr><th>对比项</th>" + NAME.map(function (n, i) { return "<th>" + n + "</th>"; }).join("") + "</tr>";
+    ROWS.forEach(function (r) { h += "<tr><td>" + r[0] + "</td>" + [1, 2, 3].map(function (k) { return '<td class="' + (k - 1 === A ? "on" : "") + '">' + r[k] + "</td>"; }).join("") + "</tr>"; });
+    document.getElementById("cmp").innerHTML = h;
+    document.getElementById("msg").textContent = msg || "";
+  }
+  [0, 1, 2].forEach(function (i) { document.getElementById("a" + i).onclick = function () { A = i; net = true; srvOk = true; moved = false; render(NAME[i] + "：" + INFO[i].term + "。"); }; });
+  document.getElementById("net").onclick = function () { net = false; render(A === 0 ? "VDI 的桌面在服务器上运行，网络一断，终端收不到画面，无法继续工作。" : NAME[A] + " 的桌面在本地运行，断网后照样能用，网络恢复后再与服务器同步。"); };
+  document.getElementById("move").onclick = function () { moved = !moved; render(A === 0 ? "换一台终端登录，看到的还是自己原来的桌面和文件，因为它们一直在服务器上。这就是 VDI 的“桌面移动性”。" : "换一台终端后，需要把镜像下发到新终端；保存在原终端本地的个人数据不会自动跟过来，所以移动性较差。"); };
+  document.getElementById("down").onclick = function () { srvOk = false; render(A === 0 ? "服务器故障，所有用户的桌面都中断了。所以 VDI 的服务器一般要做集群和高可用。" : "服务器故障，已经启动的终端照常工作，只是暂时无法下发新镜像。"); };
+  document.getElementById("rs").onclick = function () { net = true; srvOk = true; moved = false; render("已恢复正常。"); };
+  render("VDI：" + INFO[0].term + "。");
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

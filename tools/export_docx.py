@@ -109,7 +109,7 @@ def main():
     OUT.mkdir(exist_ok=True)
     args = [a for a in sys.argv[1:] if a != "--pdf"]
     if args:
-        pages, name = [f"chapters/{args[0]}/index.md"], args[0]
+        pages, name = [p for p in nav_pages() if p.startswith(f"chapters/{args[0]}/")], args[0]
     else:
         pages, name = nav_pages(), course()["title"]
     title = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=_Loader)["site_name"]

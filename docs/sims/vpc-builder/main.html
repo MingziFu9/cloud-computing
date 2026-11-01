@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPC 拼图</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.net { text-align:center; padding:6px; border-radius:20px; background:#e3f2fd; font-size:13px; margin-bottom:6px; }
+.vpc { border:2px dashed #3f51b5; border-radius:10px; padding:8px; min-height:60px; }
+.vpc > .t, .sub2 > .t { font-size:12px; color:#3f51b5; font-weight:600; }
+.sub2 { border:2px dashed #00897b; border-radius:8px; padding:6px; margin-top:6px; }
+.sub2 > .t { color:#00897b; }
+.ecs { display:inline-block; vertical-align:top; width:140px; margin:4px; border:1px solid var(--line); border-radius:8px; padding:6px; font-size:12px; background:#fff; }
+.ecs .eip { margin-top:4px; padding:2px 4px; border-radius:4px; background:#ff9800; color:#fff; }
+.ecs .sg { margin-top:4px; color:var(--muted); }
+.todo li { font-size:13px; }
+.todo li.done { color:var(--pos); text-decoration:line-through; }
+.ghost { color:var(--muted); font-size:12px; text-align:center; padding:12px; }
+</style>
+</head>
+<body>
+<h1>VPC 拼图：给网站搭好云上网络</h1>
+<div class="sub">按任务清单从上到下操作。每一步都会检查前面的“积木”有没有搭好。</div>
+<div class="grid2">
+  <div>
+    <ol class="todo" id="todo"></ol>
+    <div class="row">
+      <button id="bVpc">① 创建 VPC</button>
+      <button id="bSub">② 创建交换机（子网）</button>
+      <button id="bEcs">③ 创建云服务器</button>
+      <button id="bEip">④ 申请并绑定弹性 IP</button>
+      <button id="bSg">⑤ 安全组放行 80 端口</button>
+      <button class="main" id="bTest">⑥ 从公网访问</button>
+    </div>
+    <div class="row"><span style="font-size:12.5px">子网网段</span><select id="cidr"><option>192.168.1.0/24</option><option>10.0.1.0/24</option></select></div>
+    <div class="row"><button id="bMove">弹性 IP 换绑到另一台服务器</button><button id="bReset">重来</button></div>
+  </div>
+  <div>
+    <div class="net">🌐 互联网（用户的浏览器）</div>
+    <div id="pic"></div>
+  </div>
+</div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var S;
+  function reset() { S = { vpc: false, sub: false, ecs: [], eip: -1, sg: false }; say("先创建一个 VPC：它是你在云上的“私有局域网”。", ""); render(); }
+  function say(t, c) { var m = document.getElementById("msg"); m.textContent = t; m.className = "msg " + (c || ""); }
+  var TODO = ["创建 VPC（网段 192.168.0.0/16）", "在 VPC 里创建交换机（子网）", "在子网里创建云服务器", "申请弹性 IP 并绑定到服务器", "安全组放行 80 端口", "从公网访问网站"];
+  var tested = false;
+  function render() {
+    var done = [S.vpc, S.sub, S.ecs.length > 0, S.eip >= 0, S.sg, tested];
+    document.getElementById("todo").innerHTML = TODO.map(function (t, i) { return '<li class="' + (done[i] ? "done" : "") + '">' + t + "</li>"; }).join("");
+    var p = document.getElementById("pic");
+    if (!S.vpc) { p.innerHTML = '<div class="ghost">（还没有 VPC）</div>'; return; }
+    var h = '<div class="vpc"><div class="t">VPC：192.168.0.0/16</div>';
+    if (S.sub) {
+      h += '<div class="sub2"><div class="t">交换机（子网）：192.168.1.0/24</div>';
+      S.ecs.forEach(function (e, i) {
+        h += '<div class="ecs"><b>云服务器 ' + (i + 1) + "</b><br>私网 IP：192.168.1." + (10 + i) + (S.eip === i ? '<div class="eip">弹性 IP：203.0.113.10</div>' : "") + '<div class="sg">安全组：' + (S.sg ? "放行 22、80" : "只放行 22") + "</div></div>";
+      });
+      if (!S.ecs.length) h += '<div class="ghost">（子网里还没有服务器）</div>';
+      h += "</div>";
+    } else h += '<div class="ghost">（还没有子网）</div>';
+    p.innerHTML = h + "</div>";
+  }
+  document.getElementById("bVpc").onclick = function () { if (S.vpc) { say("已经有 VPC 了。一个网站一般一个 VPC 就够。"); return; } S.vpc = true; say("VPC 建好了。它和其他用户的网络完全隔离，网段 192.168.0.0/16 由你自己规划。下一步在里面划一个子网。", "ok"); render(); };
+  document.getElementById("bSub").onclick = function () {
+    if (!S.vpc) { say("子网必须建在 VPC 里面，先创建 VPC。", "bad"); return; }
+    if (document.getElementById("cidr").value.indexOf("10.") === 0) { say("10.0.1.0/24 不在 VPC 的网段 192.168.0.0/16 之内，子网的网段必须是 VPC 网段的一部分。换成 192.168.1.0/24。", "bad"); return; }
+    if (S.sub) { say("子网已经有了。"); return; }
+    S.sub = true; say("子网建好了。阿里云叫它“交换机”，它属于某个可用区。下一步创建云服务器。", "ok"); render();
+  };
+  document.getElementById("bEcs").onclick = function () {
+    if (!S.sub) { say("云服务器要放进某个子网，先创建交换机（子网）。", "bad"); return; }
+    if (S.ecs.length >= 2) { say("演示最多两台服务器。"); return; }
+    S.ecs.push(1); say("云服务器 " + S.ecs.length + " 创建好了，自动分到私网 IP 192.168.1." + (9 + S.ecs.length) + "。私网 IP 只能在 VPC 内部使用，互联网上的用户还访问不到它。", "ok"); render();
+  };
+  document.getElementById("bEip").onclick = function () {
+    if (!S.ecs.length) { say("弹性 IP 要绑定到一台服务器上，先创建云服务器。", "bad"); return; }
+    if (S.eip >= 0) { say("已经绑定了。要换绑，点“弹性 IP 换绑到另一台服务器”。"); return; }
+    S.eip = 0; say("弹性 IP 203.0.113.10 绑定到了云服务器 1。现在它有了公网地址。", "ok"); render();
+  };
+  document.getElementById("bSg").onclick = function () {
+    if (!S.ecs.length) { say("安全组是给云服务器用的，先创建云服务器。", "bad"); return; }
+    S.sg = true; say("安全组新增规则：允许 0.0.0.0/0 访问 TCP 80 端口（网站对所有人开放）。22 端口仍建议只对自己的 IP 开放。", "ok"); render();
+  };
+  document.getElementById("bTest").onclick = function () {
+    if (!S.vpc || !S.sub || !S.ecs.length) { say("访问失败：网站服务器都还没有。", "bad"); return; }
+    if (S.eip < 0) { say("访问失败：服务器只有私网 IP，互联网找不到它。需要绑定弹性 IP（或配置 NAT 网关、负载均衡）。", "bad"); return; }
+    if (!S.sg) { say("访问失败：请求到达了 203.0.113.10，但被安全组拦下了，因为 80 端口没有放行。", "bad"); return; }
+    tested = true; say("访问成功！浏览器 → 弹性 IP 203.0.113.10 → 安全组放行 80 → 云服务器 " + (S.eip + 1) + "（192.168.1." + (10 + S.eip) + "）。", "ok"); render();
+  };
+  document.getElementById("bMove").onclick = function () {
+    if (S.eip < 0) { say("还没有绑定弹性 IP。", "bad"); return; }
+    if (S.ecs.length < 2) { say("先再创建一台云服务器，再演示换绑。", "bad"); return; }
+    S.eip = 1 - S.eip; say("弹性 IP 换绑到了云服务器 " + (S.eip + 1) + "。用户访问的地址还是 203.0.113.10，完全感觉不到后面换了机器，这就是“弹性”。", "ok"); render();
+  };
+  document.getElementById("bReset").onclick = function () { tested = false; reset(); };
+  reset();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

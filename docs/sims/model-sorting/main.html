@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>服务模式与部署模式对号入座</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.pool { display:flex; flex-wrap:wrap; gap:6px; min-height:44px; border:1px dashed var(--line); border-radius:8px; padding:6px; }
+.card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:6px; padding:4px 8px; font-size:12.5px; cursor:grab; max-width:100%; user-select:none; }
+.card.sel { outline:2px solid var(--accent); }
+.card.bad { border-left-color:var(--neg); background:#ffebee; }
+.card.good { border-left-color:var(--pos); background:#e8f5e9; }
+.bins { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-top:8px; }
+.bin { border:2px solid var(--line); border-radius:8px; padding:6px; min-height:120px; display:flex; flex-direction:column; gap:4px; }
+.bin.over { border-color:var(--accent); background:var(--soft); }
+.bin h2 { margin:0; font-size:13px; color:var(--accent); }
+.bin .h { font-size:11.5px; color:var(--muted); }
+.hint { font-size:12px; color:var(--neg); }
+</style>
+</head>
+<body>
+<h1>服务模式与部署模式对号入座</h1>
+<div class="sub">把卡片拖进正确的格子（手机上先点卡片、再点格子）。放好后点“检查”。</div>
+<div class="row"><button id="t0" class="on">① 服务模式</button><button id="t1">② 部署模式</button></div>
+<div class="pool" id="pool"></div>
+<div class="bins" id="bins"></div>
+<div class="row"><button class="main" id="check">检查</button><button id="reset">重来</button><button id="score">看我的成绩</button></div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var SETS = [
+    { bins: [["IaaS", "租基础设施，系统和软件自己装"], ["PaaS", "平台管好环境，我只管应用和数据"], ["SaaS", "软件现成的，注册就能用"]],
+      cards: [
+        ["在云上租一台 2 核 4 GB 的虚拟机，自己装 MySQL", 0, "操作系统和数据库软件都要自己装，云只给了“机器”。"],
+        ["买一个云数据库 RDS 实例，只管建表、写数据", 1, "数据库软件的安装、备份、升级都由平台负责，你只管数据。"],
+        ["用钉钉开视频会议", 2, "软件是现成的，你只是使用者。"],
+        ["租一块云硬盘，挂到自己的虚拟机上做备份盘", 0, "云硬盘是存储基础设施，怎么分区、存什么都由你决定。"],
+        ["把写好的网站代码上传到应用托管平台，平台自动运行", 1, "你在开发应用，运行环境由平台提供。"],
+        ["用在线文档和同事一起写报告", 2, "直接使用现成的软件。"],
+        ["在云上租 GPU 服务器，自己装驱动和训练框架", 0, "驱动和框架都要自己装，说明云只提供了硬件资源。"],
+        ["用云上的大数据开发平台写 SQL 分析数据，不用管集群", 1, "集群由平台维护，你在平台上开发分析任务。"]
+      ] },
+    { bins: [["公有云", "第三方提供，面向公众"], ["私有云", "一个组织独享"], ["混合云", "不同类型的云组合"], ["社区云", "多个有共同目标的组织共享"]],
+      cards: [
+        ["网店把网站放在阿里云上，与其他用户共享机房", 0, "第三方云服务商面向公众提供的云。"],
+        ["某银行在自己的数据中心搭建云平台，只给本行使用", 1, "只供一个组织使用。"],
+        ["银行核心系统在自己的机房，手机银行活动页放在公有云", 2, "私有云 + 公有云的组合。"],
+        ["某省各级政府部门共用的政务云", 3, "面向一群有共同目标的用户（各级政府部门）。"],
+        ["个人用华为云服务器搭建博客", 0, "面向公众开放的云服务。"],
+        ["大型制造企业在总部机房建云平台，供各分厂使用", 1, "虽然有多个分厂，但都属于同一个组织。"],
+        ["平时用自己机房，促销高峰时把多出的访问引到公有云", 2, "自有私有环境与公有云组合使用。"],
+        ["几所高校联合建设、共同使用的教育科研云", 3, "多个有共同目标的组织共享。"]
+      ] }
+  ];
+  var tab = 0, state = [null, null], first = [null, null], sel = null;
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function fresh(t) { state[t] = shuffle(SETS[t].cards.map(function (c, i) { return { i: i, at: -1, mark: "" }; })); }
+  fresh(0); fresh(1);
+  function cardEl(c) {
+    var d = document.createElement("div"), data = SETS[tab].cards[c.i];
+    d.className = "card" + (sel === c ? " sel" : "") + (c.mark ? " " + c.mark : ""); d.draggable = true;
+    d.innerHTML = data[0] + (c.mark === "bad" ? '<div class="hint">提示：' + data[2] + "</div>" : "");
+    d.ondragstart = function (e) { sel = c; e.dataTransfer.setData("text", "x"); };
+    d.onclick = function (e) { e.stopPropagation(); sel = sel === c ? null : c; render(); };
+    return d;
+  }
+  function drop(to) { if (!sel) return; sel.at = to; sel.mark = ""; sel = null; render(); }
+  function zone(el, to) {
+    el.onclick = function () { drop(to); };
+    el.ondragover = function (e) { e.preventDefault(); el.classList.add("over"); };
+    el.ondragleave = function () { el.classList.remove("over"); };
+    el.ondrop = function (e) { e.preventDefault(); el.classList.remove("over"); drop(to); };
+  }
+  function render() {
+    ["t0", "t1"].forEach(function (id, i) { document.getElementById(id).className = i === tab ? "on" : ""; });
+    var pool = document.getElementById("pool"), bins = document.getElementById("bins");
+    pool.innerHTML = ""; bins.innerHTML = ""; zone(pool, -1);
+    state[tab].filter(function (c) { return c.at < 0; }).forEach(function (c) { pool.appendChild(cardEl(c)); });
+    if (!pool.children.length) pool.innerHTML = '<span class="note">卡片都放好了，点“检查”。</span>';
+    SETS[tab].bins.forEach(function (b, k) {
+      var d = document.createElement("div"); d.className = "bin";
+      d.innerHTML = "<h2>" + b[0] + '</h2><div class="h">' + b[1] + "</div>";
+      state[tab].filter(function (c) { return c.at === k; }).forEach(function (c) { d.appendChild(cardEl(c)); });
+      zone(d, k); bins.appendChild(d);
+    });
+  }
+  function say(t, cls) { var m = document.getElementById("msg"); m.textContent = t; m.className = "msg " + (cls || ""); }
+  document.getElementById("t0").onclick = function () { tab = 0; sel = null; say(""); render(); };
+  document.getElementById("t1").onclick = function () { tab = 1; sel = null; say(""); render(); };
+  document.getElementById("check").onclick = function () {
+    var left = state[tab].filter(function (c) { return c.at < 0; }).length;
+    if (left) { say("还有 " + left + " 张卡片没放。", "bad"); return; }
+    var ok = 0;
+    state[tab].forEach(function (c) { var r = SETS[tab].cards[c.i][1] === c.at; c.mark = r ? "good" : "bad"; if (r) ok++; });
+    if (first[tab] === null) first[tab] = ok;
+    render();
+    say(ok === 8 ? "全部正确！" + (tab === 0 ? "接着做“② 部署模式”。" : "") : "答对 " + ok + " / 8 张。红色卡片下面有提示，拖到正确的格子后再检查。", ok === 8 ? "ok" : "bad");
+  };
+  document.getElementById("reset").onclick = function () { fresh(tab); sel = null; say(""); render(); };
+  document.getElementById("score").onclick = function () {
+    function f(v) { return v === null ? "还没检查" : v + " / 8"; }
+    say("第一次检查的成绩：服务模式 " + f(first[0]) + "，部署模式 " + f(first[1]) + "。请记入实验记录表。");
+  };
+  render();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

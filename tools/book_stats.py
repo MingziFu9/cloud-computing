@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 import glossary_links as g
-from common import course
+from common import chapter_text, course
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -14,7 +14,8 @@ START, END = "<!-- stats:start -->", "<!-- stats:end -->"
 
 
 def chapter_stats(path, num, glossary):
-    s = path.read_text(encoding="utf-8")
+    ch = course()["chapters"][num - 1]
+    s = chapter_text(ch)
     body = s[:s.index("## 课后练习")]
     body = re.sub(r"```.*?```", "", body, flags=re.S)          # 不算代码
     body = re.sub(r"<[^>]+>|\]\([^)]*\)", "", body)              # 不算 HTML 标签和链接网址

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MapReduce 词频统计</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.steps { display:flex; gap:4px; flex-wrap:wrap; font-size:12px; }
+.steps span { padding:2px 8px; border-radius:10px; background:#eceff1; }
+.steps span.on { background:var(--accent); color:#fff; }
+.lanes { display:grid; gap:6px; margin-top:6px; }
+.lane { border:1px solid var(--line); border-radius:8px; padding:6px; font-size:12.5px; }
+.lane h2 { font-size:12.5px; margin:0 0 4px; color:var(--accent); }
+.kv { display:inline-block; margin:2px; padding:1px 6px; border-radius:4px; background:#e8eaf6; font-family:"JetBrains Mono",Consolas,monospace; font-size:12px; }
+.kv.hot { background:#ffe0b2; }
+</style>
+</head>
+<body>
+<h1>MapReduce 词频统计：一步一步看</h1>
+<div class="sub">每行是一个输入分片（词之间用空格分开），共 3 个 Map、2 个 Reduce。“云计算”一词用橙色标出，跟着它走一遍。</div>
+<textarea id="inp" rows="3">云计算 让 计算 像 水电 一样 按需 使用
+虚拟化 是 云计算 的 基础 容器 让 部署 更 快
+分布式 存储 和 分布式 计算 支撑 云计算 的 弹性</textarea>
+<div class="row"><button class="main" id="next">下一步</button><button id="auto">自动播放</button><button id="reset">重来</button></div>
+<div class="steps" id="steps"></div>
+<div class="lanes" id="lanes"></div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var NAMES = ["输入分片", "Map", "Shuffle 与 Sort", "Reduce", "输出结果"];
+  var TIPS = [
+    "输入数据被切成 3 个分片，每个分片交给一个 Map 任务，3 个 Map 在不同机器上同时运行。",
+    "Map：把每个词变成一个键值对（词, 1）。Map 之间互不通信，各算各的。",
+    "Shuffle：按词分组，同一个词的所有 (词, 1) 必须送到同一个 Reduce（这里按词的字节和对 2 取余决定去哪个）；Sort：每个 Reduce 把收到的词按键排好序。",
+    "Reduce：把同一个词后面的 1 全部加起来。",
+    "把各个 Reduce 的结果合在一起，就是全部文本的词频。"
+  ];
+  var step = -1, timer = null, HOT = "云计算";
+  function bucket(w) { var s = 0; new TextEncoder().encode(w).forEach(function (b) { s += b; }); return s % 2; }
+  function kv(k, v) { return '<span class="kv' + (k === HOT ? " hot" : "") + '">(' + k + ", " + v + ")</span>"; }
+  function render() {
+    document.getElementById("steps").innerHTML = NAMES.map(function (n, i) { return '<span class="' + (i === step ? "on" : "") + '">' + (i + 1) + ". " + n + "</span>"; }).join("");
+    var splits = document.getElementById("inp").value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    var lanes = document.getElementById("lanes"), h = "";
+    var groups = [{}, {}];
+    splits.forEach(function (l) { l.split(/\s+/).forEach(function (w) { var g = groups[bucket(w)]; (g[w] = g[w] || []).push(1); }); });
+    function sorted(g) { return Object.keys(g).sort(); }
+    if (step < 0) h = '<div class="note">点“下一步”开始。</div>';
+    else if (step <= 1) {
+      lanes.style.gridTemplateColumns = "repeat(auto-fit,minmax(180px,1fr))";
+      splits.forEach(function (l, i) {
+        h += '<div class="lane"><h2>' + (step === 0 ? "分片 " + i : "Map-" + i) + "</h2>" + (step === 0 ? l.split(/\s+/).map(function (w) { return w === HOT ? '<span class="kv hot">' + w + "</span>" : w; }).join(" ") : l.split(/\s+/).map(function (w) { return kv(w, 1); }).join("")) + "</div>";
+      });
+    } else if (step <= 3) {
+      lanes.style.gridTemplateColumns = "repeat(auto-fit,minmax(240px,1fr))";
+      groups.forEach(function (g, r) {
+        h += '<div class="lane"><h2>Reduce-' + r + "（收到 " + Object.keys(g).length + " 个词）</h2>" + sorted(g).map(function (w) { return step === 2 ? kv(w, "[" + g[w].join(", ") + "]") : kv(w, g[w].length); }).join("") + "</div>";
+      });
+    } else {
+      lanes.style.gridTemplateColumns = "1fr";
+      var all = []; groups.forEach(function (g) { Object.keys(g).forEach(function (w) { all.push([w, g[w].length]); }); });
+      all.sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+      var total = all.reduce(function (s, x) { return s + x[1]; }, 0);
+      h = '<div class="lane"><h2>最终结果（共 ' + all.length + " 个不同的词，" + total + " 个词次）</h2>" + all.map(function (x) { return kv(x[0], x[1]); }).join("") + "</div>";
+    }
+    lanes.innerHTML = h;
+    document.getElementById("msg").textContent = step >= 0 ? TIPS[step] : "";
+    document.getElementById("next").disabled = step >= 4;
+  }
+  function next() { if (step < 4) { step++; render(); } else { clearInterval(timer); timer = null; document.getElementById("auto").textContent = "自动播放"; } }
+  document.getElementById("next").onclick = next;
+  document.getElementById("reset").onclick = function () { step = -1; clearInterval(timer); timer = null; document.getElementById("auto").textContent = "自动播放"; render(); };
+  document.getElementById("auto").onclick = function () {
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "自动播放"; return; }
+    if (step >= 4) step = -1;
+    this.textContent = "暂停"; next(); timer = setInterval(next, 2200);
+  };
+  document.getElementById("inp").oninput = function () { step = -1; render(); };
+  render();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

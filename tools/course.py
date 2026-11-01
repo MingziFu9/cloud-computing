@@ -19,7 +19,7 @@ sync 会做这些事（只增不删，已写好的正文不会被覆盖）：
 import re
 import sys
 
-from common import (CHAPTERS, DOCS, ROOT, chapter_heading, chapter_path, course, front_matter,
+from common import (CHAPTERS, DOCS, ROOT, chapter_heading, chapter_path, chapter_text, course, front_matter,
                     replace_between, site_url)
 
 GLOSSARY = DOCS / "appendix/glossary.md"
@@ -66,7 +66,7 @@ def render_chapter(ch, c):
 def sync_chapters(c):
     for ch in c["chapters"]:
         p = chapter_path(ch)
-        if not p.exists():
+        if not p.exists() and not ch.get("pages"):
             p.parent.mkdir(parents=True, exist_ok=True)
             (p.parent / "images").mkdir(exist_ok=True)
             p.write_text(render_chapter(ch, c), encoding="utf-8")
@@ -129,7 +129,15 @@ def sync_mkdocs(c):
                      ("site_url", site_url(c)), ("repo_url", f"https://github.com/{c['github_user']}/{c['repo']}")):
         s = re.sub(rf"^{key}:.*$", f"{key}: {val}", s, count=1, flags=re.M)
     nav = ["nav:", "  - 首页: index.md", "  - 课程描述: course-description.md"]
-    nav += [f"  - {q(chapter_heading(ch))}: chapters/{ch['dir']}/index.md" for ch in c["chapters"]]
+    for ch in c["chapters"]:
+        if not ch.get("pages"):
+            nav.append(f"  - {q(chapter_heading(ch))}: chapters/{ch['dir']}/index.md")
+            continue
+        nav.append(f"  - {q(chapter_heading(ch))}:")
+        nav.append(f"    - chapters/{ch['dir']}/index.md")
+        nav += [f"    - {q(pg['title'])}: chapters/{ch['dir']}/{pg['file']}" for pg in ch["pages"]]
+        nav += [f"    - {q(c['lab_section'])}: chapters/{ch['dir']}/labs.md",
+                f"    - 本章小结与练习: chapters/{ch['dir']}/summary.md"]
     nav += ["  - 交互动画:", "    - sims/index.md"] + [f"    - {q(x['title'])}: sims/{x['name']}/index.md" for x in sims()]
     nav += ["  - 学习图谱: learning-graph/index.md", "  - 常见问题: faq/index.md"]
     nav += [f"  - {q(x['title'])}: {x['file']}" for x in c.get("extra_pages", [])]
@@ -145,10 +153,8 @@ def sync_mkdocs(c):
 # ---------- 首页 ----------
 
 def lab_titles(ch, c):
-    p = chapter_path(ch)
-    if not p.exists():
-        return []
-    return re.findall(rf"^### ({c['lab_word']} \d+-\d+ .+)$", p.read_text(encoding="utf-8"), re.M)
+    from common import chapter_text
+    return re.findall(rf"^### ({c['lab_word']} \d+-\d+ .+)$", chapter_text(ch), re.M)
 
 
 def sync_index(c):

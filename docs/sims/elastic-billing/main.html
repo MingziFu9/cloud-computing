@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按需付费与弹性伸缩</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.legend span { display:inline-flex; align-items:center; gap:4px; margin-right:12px; font-size:12px; }
+.legend i { width:14px; height:4px; display:inline-block; border-radius:2px; }
+.cost { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.cost .box { text-align:center; }
+.cost .big { display:block; }
+svg { width:100%; height:auto; display:block; }
+</style>
+</head>
+<body>
+<h1>按需付费与弹性伸缩：一家网店的一天</h1>
+<div class="sub">一台服务器最多同时服务 1000 人。自建机房必须按“最高峰”买够服务器，全天开着；上云后每小时按实际访问量开服务器，用多少付多少。</div>
+<div class="row"><span>高峰访问量</span><input type="range" id="peak" min="2000" max="12000" step="500" value="6000"><span class="mono" id="peakv">6000 人</span></div>
+<div class="row"><label><input type="checkbox" id="burst"> 下午 3 点突然上了热搜（突发流量，比预计高峰再高 50%）</label></div>
+<div class="legend"><span><i style="background:#90a4ae"></i>访问量（千人）</span><span><i style="background:#ef6c00"></i>自建：服务器台数</span><span><i style="background:#3f51b5"></i>上云：服务器台数</span></div>
+<svg id="chart" viewBox="0 0 640 260"></svg>
+<div class="cost">
+  <div class="box"><h2>自建机房</h2><span class="big" id="c1">—</span><span class="note" id="n1"></span></div>
+  <div class="box"><h2>上云（按量付费 + 弹性伸缩）</h2><span class="big" id="c2">—</span><span class="note" id="n2"></span></div>
+</div>
+<div class="msg" id="msg"></div>
+<div class="note">价格为示意值：自建服务器折合 0.6 元/台·小时（含购买、电费、机房，按 3 年分摊），云服务器按量 1.0 元/台·小时。真实价格请在实验 1-1 中用价格计算器查。</div>
+<script>
+(function () {
+  var CAP = 1000, SELF = 0.6, CLOUD = 1.0;
+  // 一天 24 小时的访问量形状（相对高峰的比例）：凌晨低、中午小高峰、晚上 8 点大高峰
+  var SHAPE = [0.12,0.08,0.06,0.05,0.05,0.07,0.12,0.2,0.3,0.38,0.42,0.5,0.58,0.5,0.45,0.45,0.48,0.55,0.68,0.85,1.0,0.92,0.6,0.3];
+  var svg = document.getElementById("chart");
+  function el(t, a, txt) { var e = document.createElementNS("http://www.w3.org/2000/svg", t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+  function render() {
+    var peak = +document.getElementById("peak").value, burst = document.getElementById("burst").checked;
+    document.getElementById("peakv").textContent = peak + " 人";
+    var load = SHAPE.map(function (r, h) { var v = r * peak; if (burst && h === 15) v = peak * 1.5; return Math.round(v); });
+    var selfN = Math.ceil(peak / CAP);            // 按预计高峰买
+    var cloudN = load.map(function (v) { return Math.max(1, Math.ceil(v / CAP)); });
+    var maxY = Math.max(selfN, Math.max.apply(null, cloudN), Math.max.apply(null, load) / CAP) + 1;
+    svg.innerHTML = "";
+    var L = 40, R = 630, T = 10, B = 225, W = (R - L) / 24;
+    function y(v) { return B - v / maxY * (B - T); }
+    for (var g = 0; g <= maxY; g += Math.ceil(maxY / 6)) { el("line", {x1:L, x2:R, y1:y(g), y2:y(g), stroke:"#eceff1"}); el("text", {x:L - 6, y:y(g) + 4, "text-anchor":"end", "font-size":11, fill:"#78909c"}, g); }
+    var over = [];
+    load.forEach(function (v, h) {
+      var x = L + h * W;
+      var bad = v > selfN * CAP;
+      if (bad) over.push(h);
+      el("rect", {x:x + 2, y:y(v / CAP), width:W - 4, height:B - y(v / CAP), fill: bad ? "#ef9a9a" : "#cfd8dc"});
+      if (h % 3 === 0) el("text", {x:x + W / 2, y:B + 16, "text-anchor":"middle", "font-size":11, fill:"#78909c"}, h + "时");
+    });
+    el("line", {x1:L, x2:R, y1:y(selfN), y2:y(selfN), stroke:"#ef6c00", "stroke-width":3});
+    var d = cloudN.map(function (n, h) { return (h ? "L" : "M") + (L + h * W) + " " + y(n) + " L" + (L + (h + 1) * W) + " " + y(n); }).join(" ");
+    el("path", {d:d, fill:"none", stroke:"#3f51b5", "stroke-width":3});
+    el("text", {x:R, y:y(selfN) - 6, "text-anchor":"end", "font-size":12, fill:"#ef6c00"}, "自建：始终 " + selfN + " 台");
+    var selfCost = selfN * 24 * SELF, hours = cloudN.reduce(function (a, b) { return a + b; }, 0), cloudCost = hours * CLOUD;
+    document.getElementById("c1").textContent = selfCost.toFixed(1) + " 元/天";
+    document.getElementById("n1").textContent = selfN + " 台 × 24 小时 × " + SELF + " 元";
+    document.getElementById("c2").textContent = cloudCost.toFixed(1) + " 元/天";
+    document.getElementById("n2").textContent = "共 " + hours + " 台·小时 × " + CLOUD + " 元";
+    var avg = load.reduce(function (a, b) { return a + b; }, 0) / 24 / (selfN * CAP) * 100;
+    var m = "自建机房的平均资源利用率只有 " + avg.toFixed(0) + "%，大部分时间服务器在空转。";
+    m += cloudCost < selfCost ? " 上云每天省 " + (selfCost - cloudCost).toFixed(1) + " 元。" : " 这时上云反而更贵：访问量全天都高时，包年包月或自建更划算。";
+    if (over.length) m = "下午 " + over.map(function (h) { return h + " 点"; }).join("、") + " 访问量超过了自建机房的能力（红色柱子），部分顾客打不开网页！上云的蓝线则跟着访问量自动加到了 " + Math.max.apply(null, cloudN) + " 台。" + " " + m;
+    var msg = document.getElementById("msg"); msg.textContent = m; msg.className = "msg " + (over.length ? "bad" : "");
+  }
+  document.getElementById("peak").oninput = render;
+  document.getElementById("burst").onchange = render;
+  render();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

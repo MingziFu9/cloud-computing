@@ -1,47 +1,97 @@
 # ============================================================
 # 课程配置：全书唯一需要手改的配置文件
-# 改完后运行  python tools/course.py sync  ，会自动更新：
-#   mkdocs.yml 的站点名和导航、首页课程信息与目录、缺少的章节骨架、
-#   实验目录、术语表的章节小节、学习图谱的章节列表、附录编号
-# 课件（tools/make_slides.py）、教案（tools/make_lesson_plan.py）、Word/PDF 版（tools/export_docx.py）
-# 也从这里读取课程名、学时等信息
+# 改完后运行  python tools/course.py sync
+# 本书与系列其他教材不同：底本是已出版的《云计算及应用》（赵宇丹主编，国家开放大学出版社，2026），
+# 章节结构与原书一致，每章拆成多页：章首页 index.md、每节一页（pages）、本章实验 labs.md、本章小结与练习 summary.md
 # ============================================================
 
-title: 课程名称                      # 书名，例如：机器学习
-description: 面向成人教育人工智能技术应用专业（专科）的《课程名称》教材，每章配套动手实验
+title: 云计算及应用
+description: 面向成人教育人工智能技术应用专业（专科）的《云计算及应用》网络教材，与国家开放大学出版社 2026 年版纸质教材配套，含交互动画、网页实验、课件和教案
 audience: 成人教育（继续教育）人工智能技术应用专业专科学生，多为在职学习者
-github_user: MingziFu9                # 网址 https://<github_user>.github.io/<repo>/
-repo: ai-textbook-template            # GitHub 仓库名（用模板新建后改成本课的，如 ml-textbook）
+github_user: MingziFu9
+repo: cloud-computing
 
-credits: 4                            # 学分
-hours: {theory: 60, lab: 12}          # 学时：理论 + 实验
-semester: 3                           # 开课学期
-exam: 闭卷                            # 期末考核方式
-labs_per_chapter: 3                   # 每章实验数；0 表示没有实验
-lab_section: 本章实验                 # 实验部分的二级标题；导论用“在线体验”
-lab_word: 实验                        # 每个实验的三级标题前缀（### 实验 N-M）；导论用“体验”
-frontier_title: 前沿视窗              # 每章“前沿”小节的名称，导论用“身边的 AI”
-certificates:                         # 对应的职业证书；没有证书的课程写成 certificates: []，导航里就不显示“证书考点对照”页
-  - name: 证书名称（级别）
-    issuer: 发证机构，标准或考纲名称（年份）
+credits: 2
+hours: {theory: 28, lab: 8}           # 理论 28（线上 21 + 线下 7）+ 线上实验 8 = 36
+semester: 3
+exam: 闭卷
+labs_per_chapter: 3
+lab_section: 本章实验
+lab_word: 实验
+frontier_title: 前沿视窗
+certificates: []
 
-# 章节：dir 是 docs/chapters/ 下的文件夹名（两位章号开头），short 用于学习图谱等窄处
-# theory / lab 是本章学时；labs 可单独覆盖本章实验数；offline 可指定本章线下学时（不写则按 online_ratio 分）
 chapters:
-  - {dir: 01-sample, title: 示例章, short: 示例章, theory: 5, lab: 1}
+  - dir: 01-cloud-basics
+    title: 云计算基础
+    short: 云计算基础
+    theory: 5
+    offline: 1
+    lab: 1
+    labs: 2
+    pages:
+      - {file: 1-1.md, title: 1.1 云计算概述}
+      - {file: 1-2.md, title: 1.2 云计算的发展}
+  - dir: 02-core-technologies
+    title: 云计算核心技术
+    short: 核心技术
+    theory: 11
+    offline: 3
+    lab: 3
+    labs: 4
+    pages:
+      - {file: 2-1.md, title: 2.1 虚拟化技术}
+      - {file: 2-2.md, title: 2.2 分布式存储技术}
+      - {file: 2-3.md, title: 2.3 分布式计算技术}
+      - {file: 2-4.md, title: 2.4 云网络技术}
+      - {file: 2-5.md, title: 2.5 云安全技术}
+      - {file: 2-6.md, title: 2.6 桌面云技术}
+  - dir: 03-platforms-tools
+    title: 云计算平台与工具
+    short: 平台与工具
+    theory: 4
+    offline: 1
+    lab: 2
+    labs: 3
+    pages:
+      - {file: 3-1.md, title: 3.1 主流云平台入门}
+      - {file: 3-2.md, title: 3.2 IaaS 层服务}
+      - {file: 3-3.md, title: 3.3 PaaS 层服务}
+      - {file: 3-4.md, title: 3.4 SaaS 层服务}
+      - {file: 3-5.md, title: 3.5 自动化与持续集成}
+  - dir: 04-applications
+    title: 云计算应用与实践
+    short: 应用与实践
+    theory: 4
+    offline: 1
+    lab: 2
+    labs: 3
+    pages:
+      - {file: 4-1.md, title: 4.1 云计算应用案例}
+      - {file: 4-2.md, title: 4.2 行业场景应用}
+      - {file: 4-3.md, title: 4.3 大数据与云计算的融合}
+  - dir: 05-trends-careers
+    title: 未来趋势与职业发展
+    short: 趋势与职业
+    theory: 4
+    offline: 1
+    lab: 0
+    labs: 1
+    pages:
+      - {file: 5-1.md, title: 5.1 云计算未来趋势}
+      - {file: 5-2.md, title: 5.2 职业发展路径}
 
-# 其他页面：追加在导航“常见问题”之后，如 extra_pages: [{file: mock-exam.md, title: 在线模拟卷}]
-extra_pages: []
+extra_pages:
+  - {file: mock-exam.md, title: 期末模拟卷}
+  - {file: errata.md, title: 网络版与纸质版对照}
 
-# 附录：docs/appendix/ 下的文件，按顺序自动编号为 A、B、C……（术语表固定为 glossary.md）
 appendices:
-  - {file: a-python.md, title: Python 速查}
-  - {file: b-libraries.md, title: 工具库速查}
-  - {file: c-environment.md, title: 实验环境与数据说明}
+  - {file: a-labs-env.md, title: 实验环境准备}
+  - {file: b-commands.md, title: 常用命令速查}
+  - {file: c-references.md, title: 参考文献}
   - {file: glossary.md, title: 术语表}
 
-# 教案默认设置（每章可在 lesson-plans/chNN.yml 里覆盖）
 lesson_plan:
-  online_ratio: 0.5                   # 线上学时占比（开放大学以线上为主，按实际改）
-  teacher: ""                         # 授课教师，留空则教案上留出填写位置
-  school: ""                          # 学校名称，留空则不显示
+  online_ratio: 0.75
+  teacher: ""
+  school: 广州开放大学

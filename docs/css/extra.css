@@ -73,3 +73,9 @@ a.term[data-def]:hover::after {
   background-color: #8e24aa; -webkit-mask-image: var(--md-admonition-icon--cert); mask-image: var(--md-admonition-icon--cert);
 }
 
+
+/* ===== 《云计算及应用》：原书图题、表题、二维码资源 ===== */
+.md-typeset p.fig-caption { text-align: center; font-size: .78rem; color: var(--md-default-fg-color--light); margin-top: -.6em; }
+.md-typeset p.tab-caption { text-align: center; font-size: .8rem; font-weight: 600; margin-bottom: .3em; }
+.md-typeset p:has(> img) { text-align: center; }
+.md-typeset p.qr-res { font-size: .76rem; color: var(--md-default-fg-color--light); border-left: 3px solid var(--md-accent-fg-color); padding-left: .6em; }

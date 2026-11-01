@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>云计算发展时间线</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.tl { position:relative; margin:8px 0 0 4.2em; border-left:3px solid var(--line); max-height:340px; overflow-y:auto; padding-right:4px; }
+.ev { position:relative; padding:4px 0 4px 16px; cursor:pointer; }
+.ev::before { content:""; position:absolute; left:-9px; top:9px; width:13px; height:13px; border-radius:50%; background:var(--c); border:2px solid #fff; }
+.ev .y { position:absolute; left:-4.6em; width:4em; text-align:right; top:4px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.ev .d { display:none; font-size:12.5px; color:var(--muted); }
+.ev.open .d { display:block; }
+.ev.hide { display:none; }
+.key button { border-color:var(--c); color:var(--c); }
+.key button.on { background:var(--c); color:#fff; }
+.quiz .opt { display:block; width:100%; text-align:left; margin:4px 0; border-radius:8px; }
+</style>
+</head>
+<body>
+<h1>云计算发展时间线</h1>
+<div class="sub">点任意事件展开说明；点分类按钮只看这一类。时间线可以上下滚动。</div>
+<div class="row key" id="key"></div>
+<div class="tl" id="tl"></div>
+<div class="box quiz"><h2>考考你：哪件事先发生？</h2><div id="q"></div><div class="msg" id="msg"></div><button id="next">换一题</button> <span class="note" id="score"></span></div>
+<script>
+(function () {
+  var CAT = { a: ["概念与虚拟化", "#6d4c41"], b: ["公有云商业化", "#3f51b5"], c: ["云原生", "#00897b"], d: ["国内与智算", "#c62828"] };
+  var E = [
+    [1961, "a", "约翰·麦卡锡提出“效用计算”", "设想计算资源可以像水、电一样按需使用、按量付费，是云计算思想的源头。"],
+    [1965, "a", "云计算概念的萌芽（20 世纪 60 年代）", "人们开始探讨把计算资源集中起来，实现更高效的数据处理。"],
+    [1972, "a", "IBM 推广虚拟化与虚拟机", "一台宿主机可以运行多个相互独立的虚拟机，为后来云的多租户模型打下基础。"],
+    [1983, "a", "Sun 公司提出“网络就是计算机”", "描述分布式计算带来的新世界，恰好描绘了今天云计算的工作方式。"],
+    [1999, "b", "Salesforce 推出在线客户关系管理系统", "软件通过互联网提供、按订阅付费，标志着 SaaS 模式落地。"],
+    [2003, "b", "美国国家科学基金会资助 VGrADS 项目", "投资 830 万美元支持七所高校的网格与虚拟化研究项目。"],
+    [2006, "b", "亚马逊推出 EC2 和 S3", "把计算和存储作为收费的商业服务推出，现代公有云的起点。"],
+    [2008, "b", "Google App Engine 发布", "谷歌推出用于开发和托管 Web 应用的 PaaS 平台。"],
+    [2008, "b", "微软发布 Windows Azure", "微软进入云计算市场，后更名为 Microsoft Azure。"],
+    [2010, "b", "OpenStack 开源云软件计划启动", "Rackspace 与美国国家航空航天局联合发起，推动了私有云和混合云的发展。"],
+    [2011, "a", "NIST 发布云计算定义修订版", "NIST SP 800-145 给出了今天最常引用的云计算定义：5 个特点、3 种服务模式、4 种部署模式。"],
+    [2013, "c", "Docker 项目发布", "让应用连同运行环境一起打包成容器，革新了软件开发和部署方式。"],
+    [2013, "b", "Google Compute Engine 正式版", "与 AWS、Azure 形成三足鼎立之势。"],
+    [2014, "c", "Kubernetes 开源", "成为容器编排的核心技术，第 4 章会用到它的思想。"],
+    [2014, "b", "亚马逊推出 Lambda", "无须管理服务器即可运行代码，FaaS / Serverless 模式兴起，第 5 章会讲。"],
+    [2015, "c", "CNCF（云原生计算基金会）成立", "推动云原生技术的开源和推广。"],
+    [2018, "c", "Kubernetes 成为 CNCF 毕业项目", "确立了它在容器编排领域的主导地位。"],
+    [2022, "d", "钉钉宣布“全面 PaaS 化”", "下连云基础设施，上连企业应用，引导企业上钉、上云。"],
+    [2022, "d", "“东数西算”工程全面启动", "把东部的算力需求有序引导到西部，推动算力资源跨区域调配。"],
+    [2023, "d", "腾讯云发布“腾讯云数据仓库”", "存算分离的湖仓平台，帮助企业构建数据湖仓架构。"],
+    [2023, "d", "中国信通院发布《云计算白皮书（2023 年）》", "预计 2025 年我国云计算整体市场规模将超万亿元。"],
+    [2023, "d", "华为云发布云海存储", "面向中小企业的统一数据管理存储服务。"],
+    [2023, "d", "华为云发布盘古大模型 3.0", "定位为面向行业的 AI 大模型，聚焦行业场景。"],
+    [2025, "d", "中国移动提出从“云计算”到“云智算”", "在 2025 中国移动云智算大会上提出，云与人工智能深度融合。"]
+  ];
+  var on = { a: 1, b: 1, c: 1, d: 1 };
+  var key = document.getElementById("key"), tl = document.getElementById("tl");
+  Object.keys(CAT).forEach(function (k) {
+    var b = document.createElement("button"); b.style.setProperty("--c", CAT[k][1]); b.textContent = CAT[k][0]; b.className = "on";
+    b.onclick = function () { on[k] = !on[k]; b.className = on[k] ? "on" : ""; filter(); };
+    key.appendChild(b);
+  });
+  E.forEach(function (e) {
+    var d = document.createElement("div"); d.className = "ev"; d.dataset.c = e[1]; d.style.setProperty("--c", CAT[e[1]][1]);
+    d.innerHTML = '<span class="y">' + (e[0] === 1965 ? "60 年代" : e[0]) + '</span><b>' + e[2] + '</b><div class="d">' + e[3] + "</div>";
+    d.onclick = function () { d.classList.toggle("open"); };
+    tl.appendChild(d);
+  });
+  function filter() { tl.querySelectorAll(".ev").forEach(function (d) { d.classList.toggle("hide", !on[d.dataset.c]); }); }
+  var right = 0, total = 0;
+  function ask() {
+    var i, j;
+    do { i = Math.floor(Math.random() * E.length); j = Math.floor(Math.random() * E.length); } while (E[i][0] === E[j][0]);
+    var q = document.getElementById("q"); q.innerHTML = ""; document.getElementById("msg").textContent = "";
+    [i, j].forEach(function (k) {
+      var b = document.createElement("button"); b.className = "opt"; b.textContent = E[k][2];
+      b.onclick = function () {
+        if (q.dataset.done) return; q.dataset.done = 1; total++;
+        var first = E[i][0] < E[j][0] ? i : j, ok = k === first; if (ok) right++;
+        var m = document.getElementById("msg");
+        m.textContent = (ok ? "对了！" : "不对。") + "“" + E[i][2] + "”在 " + (E[i][0] === 1965 ? "20 世纪 60 年代" : E[i][0] + " 年") + "，“" + E[j][2] + "”在 " + (E[j][0] === 1965 ? "20 世纪 60 年代" : E[j][0] + " 年") + "。";
+        m.className = "msg " + (ok ? "ok" : "bad");
+        document.getElementById("score").textContent = "已答 " + total + " 题，答对 " + right + " 题";
+      };
+      q.appendChild(b);
+    });
+    delete q.dataset.done;
+  }
+  document.getElementById("next").onclick = ask;
+  ask();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

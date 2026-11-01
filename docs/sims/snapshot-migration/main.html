@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>快照与迁移</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.blocks { display:grid; grid-template-columns:repeat(12,1fr); gap:3px; max-width:520px; }
+.blk { aspect-ratio:1; border-radius:4px; background:#eceff1; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:13px; color:#fff; }
+.blk.cur { background:var(--accent); } .blk.old { background:#90a4ae; } .blk.new { outline:3px solid var(--warn); }
+.map { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin:6px 0; }
+.map div { border:1px solid var(--line); border-radius:6px; text-align:center; font-size:12px; padding:3px 0; }
+.map b { display:block; font-size:16px; color:var(--accent); }
+.snaps { font-size:12.5px; }
+.snaps button { margin:2px 4px 2px 0; }
+.mem { display:grid; grid-template-columns:repeat(16,1fr); gap:2px; max-width:420px; margin:6px auto; }
+.pg { aspect-ratio:1; border-radius:2px; background:#cfd8dc; }
+.pg.sent { background:#43a047; } .pg.dirty { background:#e53935; }
+.log { font-size:12.5px; max-height:150px; overflow:auto; }
+.hide { display:none; }
+</style>
+</head>
+<body>
+<h1>快照与迁移</h1>
+<div class="row"><button id="tabA" class="on">快照（写时重定向）</button><button id="tabB">热迁移（预拷贝）</button></div>
+
+<div id="A">
+  <div class="sub">虚拟机磁盘有 6 个位置，当前存着 A～F。“位置表”记录每个位置指向哪个存储块。打快照只是把位置表复制一份，几乎不花时间。</div>
+  <div class="row"><button class="main" id="snap">打快照</button><button id="write">修改数据</button><button id="del">误删全部数据</button><button id="resetA">重置</button></div>
+  <div><b style="font-size:12.5px">当前位置表</b><div class="map" id="map"></div></div>
+  <div><b style="font-size:12.5px">底层存储块</b>（蓝色：当前在用；灰色：只被快照引用；橙框：刚写入）<div class="blocks" id="blocks"></div></div>
+  <div class="snaps box"><b>快照列表</b>（点“回滚”恢复到该快照）<div id="snaps">还没有快照。</div></div>
+  <div class="msg" id="msgA"></div>
+</div>
+
+<div id="B" class="hide">
+  <div class="sub">虚拟机内存 4 GB，分成 64 页（每页 64 MB）；迁移网络 10 Gbit/s，每秒约传 20 页。迁移时虚拟机照常运行，会不断把一些页改“脏”（红色），这些页要重传。</div>
+  <div class="row"><span>内存变化速度</span><input type="range" id="dirty" min="0" max="30" value="6"><span class="mono" id="dv"></span></div>
+  <div class="row"><button class="main" id="go">开始迁移</button></div>
+  <div class="mem" id="mem"></div>
+  <div class="log box" id="log"></div>
+  <div class="msg" id="msgB"></div>
+</div>
+<script>
+(function () {
+  // ---------- 快照 ----------
+  var map, store, snaps, nextLetter;
+  function resetA() { map = [0, 1, 2, 3, 4, 5]; store = "ABCDEF".split(""); snaps = []; nextLetter = 6; renderA(""); }
+  function refs() { var r = {}; map.forEach(function (b) { r[b] = "cur"; }); snaps.forEach(function (s) { s.map.forEach(function (b) { if (!r[b]) r[b] = "old"; }); }); return r; }
+  function renderA(msg, fresh) {
+    document.getElementById("map").innerHTML = map.map(function (b, i) { return "<div>位置 " + (i + 1) + "<b>" + (b < 0 ? "空" : store[b]) + "</b></div>"; }).join("");
+    var r = refs(), h = "";
+    for (var i = 0; i < 24; i++) h += '<div class="blk ' + (i < store.length ? (r[i] || "") : "") + (fresh === i ? " new" : "") + '">' + (i < store.length && r[i] ? store[i] : "") + "</div>";
+    document.getElementById("blocks").innerHTML = h;
+    var sb = document.getElementById("snaps");
+    if (!snaps.length) sb.textContent = "还没有快照。";
+    else { sb.innerHTML = ""; snaps.forEach(function (s, k) { var d = document.createElement("div"); d.innerHTML = "快照 " + (k + 1) + "：" + s.map.map(function (b) { return b < 0 ? "空" : store[b]; }).join(" ") + " "; var bt = document.createElement("button"); bt.textContent = "回滚"; bt.onclick = function () { map = s.map.slice(); renderA("已回滚到快照 " + (k + 1) + "。只是把位置表换回快照里的那一份，存储块里的旧数据一直没被覆盖，所以能瞬间恢复。"); }; d.appendChild(bt); sb.appendChild(d); }); }
+    document.getElementById("msgA").textContent = msg;
+  }
+  document.getElementById("snap").onclick = function () { if (snaps.length >= 3) { renderA("最多演示 3 个快照。"); return; } snaps.push({ map: map.slice() }); renderA("打了快照 " + snaps.length + "：只复制了位置表，没有复制任何数据块。"); };
+  document.getElementById("write").onclick = function () {
+    if (store.length >= 24) { renderA("存储块用完了，点“重置”。"); return; }
+    var pos = Math.floor(Math.random() * 6), letter = String.fromCharCode(65 + nextLetter % 26); nextLetter++;
+    var old = map[pos]; store.push(letter); map[pos] = store.length - 1;
+    renderA("把位置 " + (pos + 1) + " 改成 “" + letter + "”：新数据写到了一个新的存储块，位置表改为指向它；" + (old >= 0 ? "原来的 “" + store[old] + "” 还留在原处" + (snaps.length ? "，快照仍然指向它。" : "，没有快照引用它，以后可以回收。") : ""), store.length - 1);
+  };
+  document.getElementById("del").onclick = function () { map = map.map(function () { return -1; }); renderA("数据全没了！" + (snaps.length ? "别慌，点快照后面的“回滚”。" : "可惜没有快照，数据找不回来了。先点“重置”，记得先打快照。")); };
+  document.getElementById("resetA").onclick = resetA;
+  resetA();
+
+  // ---------- 热迁移 ----------
+  var N = 64, RATE = 20, mem = document.getElementById("mem"), pages = [];
+  for (var i = 0; i < N; i++) { var p = document.createElement("div"); p.className = "pg"; mem.appendChild(p); pages.push(p); }
+  function dv() { var v = +document.getElementById("dirty").value; document.getElementById("dv").textContent = v + " 页/秒（约 " + (v * 64 / 1024).toFixed(2) + " GB/s）"; }
+  document.getElementById("dirty").oninput = dv; dv();
+  var running = false;
+  document.getElementById("go").onclick = function () {
+    if (running) return; running = true;
+    var D = +document.getElementById("dirty").value, log = document.getElementById("log"), msg = document.getElementById("msgB");
+    log.innerHTML = ""; msg.textContent = ""; msg.className = "msg";
+    pages.forEach(function (p) { p.className = "pg"; });
+    var toSend = [], round = 0, total = 0;
+    for (var i = 0; i < N; i++) toSend.push(i);
+    function step() {
+      round++;
+      var t = toSend.length / RATE;          // 本轮传输用时（秒）
+      total += t;
+      toSend.forEach(function (k) { pages[k].className = "pg sent"; });
+      var nd = Math.min(N, Math.round(D * t)), dirty = [];
+      while (dirty.length < nd) { var k = Math.floor(Math.random() * N); if (dirty.indexOf(k) < 0) dirty.push(k); }
+      setTimeout(function () {
+        dirty.forEach(function (k) { pages[k].className = "pg dirty"; });
+        log.insertAdjacentHTML("beforeend", "第 " + round + " 轮：传了 " + toSend.length + " 页，用时 " + t.toFixed(2) + " 秒，期间又有 " + dirty.length + " 页变脏<br>");
+        log.scrollTop = 1e6;
+        if (dirty.length <= 2 || round >= 8) {
+          var down = dirty.length / RATE * 1000;
+          total += dirty.length / RATE;
+          setTimeout(function () {
+            dirty.forEach(function (k) { pages[k].className = "pg sent"; });
+            log.insertAdjacentHTML("beforeend", "<b>停机切换：暂停虚拟机，传最后 " + dirty.length + " 页，停机 " + down.toFixed(0) + " 毫秒</b><br>");
+            var good = dirty.length <= 2;
+            msg.textContent = (good ? "迁移完成，共 " + round + " 轮、" + total.toFixed(1) + " 秒，停机只有 " + down.toFixed(0) + " 毫秒，用户几乎察觉不到。" :
+              "内存变得太快，“脏页”越传越多，迭代 8 轮也收敛不了，只好强行停机 " + down.toFixed(0) + " 毫秒。这就是教材说的要求“脏页生成速率低于网络传输速率”。");
+            msg.className = "msg " + (good ? "ok" : "bad");
+            running = false;
+          }, 500);
+        } else { toSend = dirty; setTimeout(step, 600); }
+      }, 500);
+    }
+    step();
+  };
+  function tab(a) { document.getElementById("A").className = a ? "" : "hide"; document.getElementById("B").className = a ? "hide" : ""; document.getElementById("tabA").className = a ? "on" : ""; document.getElementById("tabB").className = a ? "" : "on"; }
+  document.getElementById("tabA").onclick = function () { tab(true); };
+  document.getElementById("tabB").onclick = function () { tab(false); };
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

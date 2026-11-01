@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全组规则试验台</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+table.r { width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed; }
+table.r th:first-child { width:2.6em; }
+table.r td, table.r th { border-bottom:1px solid var(--line); padding:3px 2px; text-align:left; }
+table.r select { font-size:12px; padding:2px; width:100%; }
+.req { display:grid; grid-template-columns:1fr auto; gap:4px; align-items:center; font-size:12.5px; border-bottom:1px solid #eceff1; padding:3px 0; }
+.req small { color:var(--muted); display:block; }
+.v { padding:1px 8px; border-radius:10px; color:#fff; font-size:12px; white-space:nowrap; }
+.v.a { background:var(--pos); } .v.d { background:#78909c; }
+.req.badone { background:#ffebee; }
+</style>
+</head>
+<body>
+<h1>安全组规则试验台：网站服务器的“门卫”</h1>
+<div class="sub">这台云服务器上跑着网站（80、443 端口）和 MySQL 数据库（3306 端口）。安全组默认拒绝所有入方向访问，只有匹配某条“允许”规则的请求才能进来。修改左边的规则，看右边的访问结果。</div>
+<div class="row"><button id="good">推荐配置</button><button id="open">一键全开（危险）</button><button id="clear">清空规则</button></div>
+<div class="grid2">
+  <div class="box"><h2>入方向规则（允许）</h2><table class="r" id="rules"></table></div>
+  <div class="box"><h2>访问请求</h2><div id="reqs"></div></div>
+</div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var PORTS = ["TCP 22（SSH 远程登录）", "TCP 80（HTTP 网站）", "TCP 443（HTTPS 网站）", "TCP 3306（MySQL）", "TCP 3389（Windows 远程桌面）", "ICMP（ping）", "全部端口"];
+  var PK = ["22", "80", "443", "3306", "3389", "icmp", "all"];
+  var SRC = ["0.0.0.0/0（任何地址）", "198.51.100.0/24（公司办公网）", "192.168.0.0/16（本 VPC 内网）"];
+  var SK = ["any", "office", "vpc"];
+  var REQ = [
+    ["全国各地的顾客浏览网站", "来自 36.112.5.8 → 80", "80", "any", true],
+    ["顾客用 HTTPS 安全访问网站", "来自 120.230.9.17 → 443", "443", "any", true],
+    ["运维人员在办公室 SSH 登录", "来自 198.51.100.23 → 22", "22", "office", true],
+    ["境外扫描器尝试 SSH 暴力破解", "来自 185.220.101.4 → 22", "22", "any", false],
+    ["本 VPC 内的应用服务器连接数据库", "来自 192.168.1.11 → 3306", "3306", "vpc", true],
+    ["陌生地址尝试连接数据库", "来自 91.240.118.9 → 3306", "3306", "any", false],
+    ["黑客尝试 Windows 远程桌面", "来自 45.141.84.120 → 3389", "3389", "any", false],
+    ["运维人员在办公室 ping 测试", "来自 198.51.100.23 → ICMP", "icmp", "office", true]
+  ];
+  var rules;
+  var GOOD = [[1, 1, 0], [1, 2, 0], [1, 0, 1], [1, 3, 2], [1, 5, 1]];
+  function setRules(r) { rules = r.map(function (x) { return x.slice(); }); while (rules.length < 5) rules.push([0, 0, 0]); render(); }
+  function contains(src, cat) { return src === "any" || src === cat; }
+  function allowed(q) { return rules.some(function (r) { return r[0] && (PK[r[1]] === "all" || PK[r[1]] === q[2]) && contains(SK[r[2]], q[3]); }); }
+  function render() {
+    var t = document.getElementById("rules");
+    t.innerHTML = "<tr><th>启用</th><th>端口</th><th>来源</th></tr>";
+    rules.forEach(function (r, i) {
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td><input type="checkbox"' + (r[0] ? " checked" : "") + '></td><td><select>' + PORTS.map(function (p, k) { return "<option" + (k === r[1] ? " selected" : "") + ">" + p + "</option>"; }).join("") + "</select></td><td><select>" + SRC.map(function (s, k) { return "<option" + (k === r[2] ? " selected" : "") + ">" + s + "</option>"; }).join("") + "</select></td>";
+      var inp = tr.querySelectorAll("input,select");
+      inp[0].onchange = function () { r[0] = inp[0].checked ? 1 : 0; render(); };
+      inp[1].onchange = function () { r[1] = inp[1].selectedIndex; r[0] = 1; render(); };
+      inp[2].onchange = function () { r[2] = inp[2].selectedIndex; r[0] = 1; render(); };
+      t.appendChild(tr);
+    });
+    var box = document.getElementById("reqs"); box.innerHTML = "";
+    var ok = 0, leaks = [], blocked = [];
+    REQ.forEach(function (q) {
+      var a = allowed(q), right = a === q[4];
+      if (right) ok++; else if (a) leaks.push(q[0]); else blocked.push(q[0]);
+      var d = document.createElement("div"); d.className = "req" + (right ? "" : " badone");
+      d.innerHTML = "<div>" + q[0] + "<small>" + q[1] + "（" + (q[4] ? "应放行" : "应拦截") + "）</small></div>" + '<span class="v ' + (a ? "a" : "d") + '">' + (a ? "放行" : "拒绝") + "</span>";
+      box.appendChild(d);
+    });
+    var m = document.getElementById("msg");
+    if (ok === REQ.length) { m.textContent = "8 个请求全部符合预期：该放的放，该拦的拦。这就是“最小开放”原则。"; m.className = "msg ok"; }
+    else {
+      var s = "符合预期 " + ok + " / 8。";
+      if (leaks.length) s += "危险！这些本该拦截的请求被放进来了：" + leaks.join("；") + "。";
+      if (blocked.length) s += "这些正常业务被误拦了：" + blocked.join("；") + "。";
+      m.textContent = s; m.className = "msg bad";
+    }
+  }
+  document.getElementById("good").onclick = function () { setRules(GOOD); };
+  document.getElementById("open").onclick = function () { setRules([[1, 6, 0]]); };
+  document.getElementById("clear").onclick = function () { setRules([]); };
+  setRules([[1, 1, 0], [1, 0, 0]]);
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

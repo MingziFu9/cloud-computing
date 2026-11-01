@@ -1,8 +1,8 @@
 # 站点名、描述、网址和 nav 由 python tools/course.py sync 根据 course.yml 生成，请改 course.yml，不要手改这几项
-site_name: 课程名称
-site_description: 面向成人教育人工智能技术应用专业（专科）的《课程名称》教材，每章配套动手实验
-site_url: https://mingzifu9.github.io/ai-textbook-template/
-repo_url: https://github.com/MingziFu9/ai-textbook-template
+site_name: 云计算及应用
+site_description: 面向成人教育人工智能技术应用专业（专科）的《云计算及应用》网络教材，与国家开放大学出版社 2026 年版纸质教材配套，含交互动画、网页实验、课件和教案
+site_url: https://mingzifu9.github.io/cloud-computing/
+repo_url: https://github.com/MingziFu9/cloud-computing
 docs_dir: docs
 theme:
   name: material
@@ -37,15 +37,65 @@ extra_javascript:
 nav:
   - 首页: index.md
   - 课程描述: course-description.md
-  - "第 1 章 示例章": chapters/01-sample/index.md
+  - "第 1 章 云计算基础":
+    - chapters/01-cloud-basics/index.md
+    - "1.1 云计算概述": chapters/01-cloud-basics/1-1.md
+    - "1.2 云计算的发展": chapters/01-cloud-basics/1-2.md
+    - "本章实验": chapters/01-cloud-basics/labs.md
+    - 本章小结与练习: chapters/01-cloud-basics/summary.md
+  - "第 2 章 云计算核心技术":
+    - chapters/02-core-technologies/index.md
+    - "2.1 虚拟化技术": chapters/02-core-technologies/2-1.md
+    - "2.2 分布式存储技术": chapters/02-core-technologies/2-2.md
+    - "2.3 分布式计算技术": chapters/02-core-technologies/2-3.md
+    - "2.4 云网络技术": chapters/02-core-technologies/2-4.md
+    - "2.5 云安全技术": chapters/02-core-technologies/2-5.md
+    - "2.6 桌面云技术": chapters/02-core-technologies/2-6.md
+    - "本章实验": chapters/02-core-technologies/labs.md
+    - 本章小结与练习: chapters/02-core-technologies/summary.md
+  - "第 3 章 云计算平台与工具":
+    - chapters/03-platforms-tools/index.md
+    - "3.1 主流云平台入门": chapters/03-platforms-tools/3-1.md
+    - "3.2 IaaS 层服务": chapters/03-platforms-tools/3-2.md
+    - "3.3 PaaS 层服务": chapters/03-platforms-tools/3-3.md
+    - "3.4 SaaS 层服务": chapters/03-platforms-tools/3-4.md
+    - "3.5 自动化与持续集成": chapters/03-platforms-tools/3-5.md
+    - "本章实验": chapters/03-platforms-tools/labs.md
+    - 本章小结与练习: chapters/03-platforms-tools/summary.md
+  - "第 4 章 云计算应用与实践":
+    - chapters/04-applications/index.md
+    - "4.1 云计算应用案例": chapters/04-applications/4-1.md
+    - "4.2 行业场景应用": chapters/04-applications/4-2.md
+    - "4.3 大数据与云计算的融合": chapters/04-applications/4-3.md
+    - "本章实验": chapters/04-applications/labs.md
+    - 本章小结与练习: chapters/04-applications/summary.md
+  - "第 5 章 未来趋势与职业发展":
+    - chapters/05-trends-careers/index.md
+    - "5.1 云计算未来趋势": chapters/05-trends-careers/5-1.md
+    - "5.2 职业发展路径": chapters/05-trends-careers/5-2.md
+    - "本章实验": chapters/05-trends-careers/labs.md
+    - 本章小结与练习: chapters/05-trends-careers/summary.md
   - 交互动画:
     - sims/index.md
-    - "示例动画：点击计数器": sims/example-counter/index.md
+    - "资源调度装箱": sims/bin-packing/index.md
+    - "云计算发展时间线": sims/cloud-timeline/index.md
+    - "按需付费与弹性伸缩": sims/elastic-billing/index.md
+    - "服务模式与部署模式对号入座": sims/model-sorting/index.md
+    - "服务模式责任分层": sims/service-layers/index.md
+    - "MapReduce 词频统计": sims/mapreduce-wordcount/index.md
+    - "多副本与纠删码": sims/replica-ec/index.md
+    - "安全组规则试验台": sims/security-group/index.md
+    - "快照与迁移": sims/snapshot-migration/index.md
+    - "三种存储怎么存": sims/storage-types/index.md
+    - "三种桌面云架构": sims/vdi-arch/index.md
+    - "虚拟机与容器对比": sims/vm-vs-container/index.md
+    - "VPC 拼图": sims/vpc-builder/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
-  - 证书考点对照: certificate.md
+  - "期末模拟卷": mock-exam.md
+  - "网络版与纸质版对照": errata.md
   - 附录:
-    - "附录 A Python 速查": appendix/a-python.md
-    - "附录 B 工具库速查": appendix/b-libraries.md
-    - "附录 C 实验环境与数据说明": appendix/c-environment.md
+    - "附录 A 实验环境准备": appendix/a-labs-env.md
+    - "附录 B 常用命令速查": appendix/b-commands.md
+    - "附录 C 参考文献": appendix/c-references.md
     - "附录 D 术语表": appendix/glossary.md

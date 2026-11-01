@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三种存储怎么存</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.stage { min-height:220px; }
+.obj { border:1px solid var(--line); border-radius:6px; padding:6px; margin:4px 0; font-size:12.5px; background:#fafafa; }
+.obj b { color:var(--accent); }
+.obj code { word-break:break-all; }
+.tree { font-family:"JetBrains Mono",Consolas,monospace; font-size:13px; line-height:1.7; white-space:pre; }
+.hl { background:#fff3e0; color:#e65100; border-radius:3px; padding:0 3px; }
+.cells { display:grid; grid-template-columns:repeat(16,1fr); gap:2px; max-width:440px; }
+.cell { aspect-ratio:1; background:#eceff1; border-radius:2px; font-size:8px; color:#fff; display:flex; align-items:center; justify-content:center; }
+.cell.u { background:#90a4ae; } .cell.c { background:#ef6c00; }
+.pick button { margin:2px; }
+.feat { font-size:12.5px; }
+.feat td:first-child { white-space:nowrap; }
+</style>
+</head>
+<body>
+<h1>三种存储怎么存：同一张照片 cat.jpg</h1>
+<div class="sub">切换存储类型，点“存入照片”看数据是怎样被组织的。</div>
+<div class="row"><button id="t0" class="on">对象存储</button><button id="t1">文件存储</button><button id="t2">块存储</button><button class="main" id="put">存入照片</button></div>
+<div class="box stage" id="stage"></div>
+<div class="msg" id="msg"></div>
+<div class="box"><h2>小练习：选哪种存储？</h2><div id="q"></div><div class="msg" id="qmsg"></div></div>
+<script>
+(function () {
+  var t = 0, stored = [false, false, false];
+  var DESC = [
+    "对象存储：没有目录树，所有对象“平铺”在存储桶里。每个对象 = 对象名（键）+ 数据 + 元数据，通过网址（HTTP 接口）整体存取。容量几乎无限，适合海量图片、视频、备份。",
+    "文件存储：有目录树，按“路径”找文件，多台服务器可以同时挂载同一个共享目录，像共享盘一样使用。适合企业共享文件、多个节点共同读取的训练数据。",
+    "块存储：存储系统只认识一个个固定大小的“块”和块编号，不知道什么是文件。它像一块挂在服务器上的硬盘，由服务器上的文件系统记住 cat.jpg 占了哪些块。时延低，适合数据库、虚拟机磁盘。"
+  ];
+  function render() {
+    [0, 1, 2].forEach(function (i) { document.getElementById("t" + i).className = i === t ? "on" : ""; });
+    var s = document.getElementById("stage"), on = stored[t], h = "";
+    if (t === 0) {
+      h = '<div class="note">存储桶 mybucket（扁平，没有真正的文件夹）</div>';
+      h += '<div class="obj"><b>index.html</b> · 2 KB · text/html</div><div class="obj"><b>videos/intro.mp4</b> · 35 MB · video/mp4</div>';
+      if (on) h += '<div class="obj"><span class="hl"><b>photos/2026/cat.jpg</b></span> · 1.2 MB · image/jpeg<br>自定义元数据：camera = phone，city = guangzhou<br>访问地址：<code>https://mybucket.oss-cn-guangzhou.example.com/photos/2026/cat.jpg</code></div>';
+    } else if (t === 1) {
+      h = '<div class="note">共享目录 /share，服务器 A 和服务器 B 同时挂载</div><div class="tree">/share\n├── docs/\n│   └── 课程表.xlsx\n└── photos/\n    └── 2026/\n' + (on ? '        └── <span class="hl">cat.jpg</span>   ← 服务器 A 写入，服务器 B 立刻能读到\n' : "") + "</div>";
+    } else {
+      h = '<div class="note">一块 64 个块的云硬盘（每块 4 KB，演示用）。灰色：已被其他数据占用；橙色：cat.jpg 占用的块。</div><div class="cells">';
+      var used = [0, 1, 2, 5, 9, 10, 11, 17, 30, 31, 40], cat = [12, 13, 14, 22, 23, 41];
+      for (var i = 0; i < 64; i++) h += '<div class="cell ' + (on && cat.indexOf(i) >= 0 ? "c" : used.indexOf(i) >= 0 ? "u" : "") + '">' + (on && cat.indexOf(i) >= 0 ? i : "") + "</div>";
+      h += "</div>" + (on ? '<div class="note">服务器上的文件系统记录：cat.jpg → 块 12、13、14、22、23、41。存储系统本身只知道“这些块被写了”。</div>' : "");
+    }
+    s.innerHTML = h;
+    document.getElementById("msg").textContent = on ? DESC[t] : "点“存入照片”。";
+  }
+  [0, 1, 2].forEach(function (i) { document.getElementById("t" + i).onclick = function () { t = i; render(); }; });
+  document.getElementById("put").onclick = function () { stored[t] = true; render(); };
+  render();
+  var Q = [["一个短视频平台每天新增上百万条视频", 0, "海量非结构化数据，按网址播放，用对象存储。"],
+           ["10 台训练服务器要同时读取同一份训练数据集目录", 1, "多台机器共享同一个目录，用文件存储。"],
+           ["给 MySQL 数据库服务器加一块高性能数据盘", 2, "数据库要低时延、随机读写，用块存储。"],
+           ["公司把 5 年前的财务凭证扫描件长期归档保存", 0, "长期保存、很少读取，用对象存储的归档类型最便宜。"]];
+  var qi = 0, right = 0;
+  function ask() {
+    var q = document.getElementById("q");
+    if (qi >= Q.length) { q.innerHTML = "<b>完成！答对 " + right + " / " + Q.length + " 题。</b>"; return; }
+    q.innerHTML = '<div class="feat">' + (qi + 1) + ". " + Q[qi][0] + '</div><div class="pick"></div>';
+    ["对象存储", "文件存储", "块存储"].forEach(function (n, k) {
+      var b = document.createElement("button"); b.textContent = n;
+      b.onclick = function () { var ok = k === Q[qi][1]; if (ok) right++; var m = document.getElementById("qmsg"); m.textContent = (ok ? "对！" : "不对。") + Q[qi][2]; m.className = "msg " + (ok ? "ok" : "bad"); qi++; setTimeout(ask, 900); };
+      q.querySelector(".pick").appendChild(b);
+    });
+  }
+  ask();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>
