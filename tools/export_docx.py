@@ -162,7 +162,11 @@ def main():
     set_cjk_font(dst)
     print(f"已导出 {dst.relative_to(ROOT)}（{len(pages)} 个页面）")
     if "--pdf" in sys.argv:
-        subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(OUT), str(dst)], check=True)
+        pdf = dst.with_suffix(".pdf")
+        r = subprocess.run(["/usr/bin/python3", str(ROOT / "tools/docx2pdf.py"), str(dst.resolve()), str(pdf.resolve())])
+        if r.returncode != 0 or not pdf.exists():   # 没有 python3-uno 时退回直接转换（PDF 里的目录会是空的）
+            subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(OUT), str(dst)], check=True)
+        print(f"已导出 {pdf.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

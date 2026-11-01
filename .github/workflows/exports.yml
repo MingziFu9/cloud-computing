@@ -21,7 +21,7 @@ jobs:
       - name: 安装中文字体、pandoc 和 LibreOffice
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk pandoc libreoffice-writer
+          sudo apt-get install -y fonts-noto-cjk pandoc libreoffice-writer python3-uno
       - run: pip install -r requirements-tools.txt
       - name: 渲染 Mermaid 图和动画截图
         run: |
