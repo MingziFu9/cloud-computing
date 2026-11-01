@@ -24,12 +24,12 @@ def chapter_stats(path, num, glossary):
     return {
         "num": num, "dir": path.parent.name,
         "words": len(re.findall(r"[一-鿿]", body)),
-        "labs": len(re.findall(r"^### (?:实验|体验) \d+-\d+", s, re.M)),   # 导论用“体验 N-M”
+        "labs": len(re.findall(r"^#{2,3} (?:实验|体验) \d+-\d+", s, re.M)),   # 导论用“体验 N-M”
         "exercises": exercises,
         "quiz": len(re.findall(r'class="quiz[ "]', tail)),
         "terms": len(glossary.get(num, [])),
-        "refs": len(re.findall(rf'<span id="ref{num}-\d+"></span>', s)),
-        "sims": s.count('class="sim-frame"'),
+        "refs": len(re.findall(rf'<span id="ref{num}-\d+"></span>', s)) or len(re.findall(r"^\d+\. .*\[(?:M|J|EB/OL|R|C|D)\]", s, re.M)),
+        "sims": len(set(re.findall(r'class="sim-frame" src="[./]*sims/([\w-]+)/', re.split(r"\n# 第 \d+ 章 本章实验", s)[0]))),   # 只数正文里的动画（实验页里的练习动画不算）
     }
 
 

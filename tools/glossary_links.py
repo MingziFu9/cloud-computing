@@ -89,34 +89,46 @@ def link_bold(parts, name, aid, definition):
     return False
 
 
+def chapter_section_pages(num):
+    """一章多页时，按节号顺序返回各节页面（N-M.md）；单页章节返回 index.md。"""
+    d = next(CHAPTERS.glob(f"{num:02d}-*/"))
+    pages = sorted(d.glob(f"{num}-*.md"), key=lambda p: int(p.stem.split("-")[1]))
+    return pages or [d / "index.md"]
+
+
 def link_chapter(num):
-    path = next(CHAPTERS.glob(f"{num:02d}-*/index.md"))
-    text = path.read_text(encoding="utf-8")
-    # 只处理“情景导入”到“本章小结”之间的正文，跳过代码块
-    start = text.index("## 情景导入")
-    end = text.index("## 本章小结")
-    body = text[start:end]
-    parts = re.split(r"(```.*?```)", body, flags=re.S)
+    # 每页只处理正文：单页章节是“情景导入”到“本章小结”之间，多页章节是标题之后到“随堂小测”之前；跳过代码块
+    docs = []
+    for path in chapter_section_pages(num):
+        text = path.read_text(encoding="utf-8")
+        if "## 情景导入" in text:
+            start, end = text.index("## 情景导入"), text.index("## 本章小结")
+        else:
+            start = text.index("\n# ") + 1
+            end = text.index("## 随堂小测") if "## 随堂小测" in text else len(text)
+        docs.append([path, text, start, end, re.split(r"(```.*?```)", text[start:end], flags=re.S)])
     linked, missing = [], []
     for term, aid, definition in parse().get(num, []):
-        done = any(f"#{aid} " in p for p in parts)  # 已经链接过
-        if done:
-            linked.append(term)
-            continue
-        # “词向量 / 词嵌入”这类术语，正文中出现其中任一个写法即可
+        done = any(f"#{aid} " in p for d in docs for p in d[4])  # 已经链接过
         names = [term] + ([n.strip() for n in term.split(" / ")] if " / " in term else [])
-        for name in names:
-            done = link_bold(parts, name, aid, definition)
+        for d in docs:
             if done:
                 break
-        if not done:
             for name in names:
-                done = link_plain(parts, name, aid, definition)
+                done = link_bold(d[4], name, aid, definition)
+                if done:
+                    break
+        for d in docs:
+            if done:
+                break
+            for name in names:
+                done = link_plain(d[4], name, aid, definition)
                 if done:
                     break
         (linked if done else missing).append(term)
-    path.write_text(text[:start] + "".join(parts) + text[end:], encoding="utf-8")
-    print(f"已链接 {len(linked)} 个术语；正文中没有找到加粗形式的：{'、'.join(missing) or '无'}")
+    for path, text, start, end, parts in docs:
+        path.write_text(text[:start] + "".join(parts) + text[end:], encoding="utf-8")
+    print(f"第 {num} 章已链接 {len(linked)} 个术语；正文中没有找到的：{'、'.join(missing) or '无'}")
 
 
 def write_concepts(num):
@@ -131,7 +143,7 @@ def write_concepts(num):
     if m:
         text = text[:m.start()] + block + text[m.end():]
     else:
-        pos = text.index("## 情景导入")
+        pos = text.index("## 情景导入") if "## 情景导入" in text else text.index("## 案例导入")
         text = text[:pos] + block + "\n" + text[pos:]
     path.write_text(text, encoding="utf-8")
     print(f"第 {num} 章概念清单：{len(terms)} 个术语")

@@ -1,8 +1,7 @@
-# 《课程名称》实验环境（写明教材编写时实测通过的版本，Python 3.11）
-# 安装：pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-# 只列学生实验真正用到的库，版本号必须是编者实际运行过的；需要 GPU 的库单独写在下面并注明
-pandas
-numpy
-matplotlib
-scikit-learn
-jupyter
+# 《云计算及应用》实验环境（编者在 Python 3.13 中实测通过的版本）
+# 安装：pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+# 实验 4-2 的 flask、redis 写在 labs/ch04/lab4_2_compose/requirements.txt 里，在容器中安装，本机不用装
+boto3==1.43.123        # 实验 2-3 用 Python 存取对象存储
+requests==2.34.2       # 实验 2-3
+pytest==9.2.0          # 实验 3-3 单元测试
+openai                 # 实验 3-2 调用阿里云百炼（OpenAI 兼容接口）；编者环境无法访问百炼，未实测，版本不限

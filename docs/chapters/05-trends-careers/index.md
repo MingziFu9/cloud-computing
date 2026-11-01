@@ -40,6 +40,18 @@ description: 边缘计算、人工智能、Serverless、大模型等云计算发
     - **本书前文**：[3.3.2 应用托管与弹性伸缩](../03-platforms-tools/3-3.md#332)（函数计算）、[3.4.2 模型即服务 MaaS](../03-platforms-tools/3-4.md#342)、[4.2.5 云计算在制造行业中的应用](../04-applications/4-2.md#425)（边缘计算的例子）。
     - **其他课程**：同专业的《人工智能导论》《TTS、SST 与语音克隆》等课程会进一步讲解大模型；本章只需了解大模型与云计算的关系。
 
+??? abstract "本章概念清单（10 个，点击查看定义和例子）"
+    1. [边缘计算](../../appendix/glossary.md#g-边缘计算)
+    2. [物联网](../../appendix/glossary.md#g-物联网)
+    3. [移动边缘计算 / MEC](../../appendix/glossary.md#g-移动边缘计算-MEC)
+    4. [无服务器计算](../../appendix/glossary.md#g-无服务器计算)
+    5. [函数即服务](../../appendix/glossary.md#g-函数即服务)
+    6. [冷启动](../../appendix/glossary.md#g-冷启动)
+    7. [大模型](../../appendix/glossary.md#g-大模型)
+    8. [Transformer](../../appendix/glossary.md#g-Transformer)
+    9. [检索增强生成](../../appendix/glossary.md#g-检索增强生成)
+    10. [DevOps](../../appendix/glossary.md#g-DevOps)
+
 ## 案例导入
 
 !!! example "案例导入：从校园到企业级解决方案的实践之路"

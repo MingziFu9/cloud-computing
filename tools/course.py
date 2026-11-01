@@ -154,7 +154,8 @@ def sync_mkdocs(c):
 
 def lab_titles(ch, c):
     from common import chapter_text
-    return re.findall(rf"^### ({c['lab_word']} \d+-\d+ .+)$", chapter_text(ch), re.M)
+    titles = re.findall(rf"^#{{2,3}} ({c['lab_word']} \d+-\d+ .+)$", chapter_text(ch), re.M)
+    return [re.sub(r"\s*\{[^}]*\}\s*$", "", t) for t in titles]
 
 
 def sync_index(c):

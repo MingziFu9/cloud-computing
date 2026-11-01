@@ -40,6 +40,21 @@ description: 主流云平台入门，IaaS、PaaS、SaaS 三层的典型服务与
     - **本书前文**：[1.1.3 云计算的服务模式](../01-cloud-basics/1-1.md#113)、[2.4.2 虚拟网络、私有网络与弹性 IP](../02-core-technologies/2-4.md#242)、[实验 2-1 创建云服务器并打快照](../02-core-technologies/labs.md#2-1)。
     - **其他课程**：《Linux 操作系统》中的软件安装命令（`apt`／`dnf`）和服务管理命令（`systemctl`）；《Python 编程》能运行脚本、会用 `pip` 安装库（实验 3-2、3-3）。
 
+??? abstract "本章概念清单（13 个，点击查看定义和例子）"
+    1. [抢占式实例](../../appendix/glossary.md#g-抢占式实例)
+    2. [云数据库](../../appendix/glossary.md#g-云数据库)
+    3. [消息队列](../../appendix/glossary.md#g-消息队列)
+    4. [API 网关](../../appendix/glossary.md#g-API-网关)
+    5. [函数计算](../../appendix/glossary.md#g-函数计算)
+    6. [模型即服务](../../appendix/glossary.md#g-模型即服务)
+    7. [客户关系管理](../../appendix/glossary.md#g-客户关系管理)
+    8. [企业资源计划 / ERP](../../appendix/glossary.md#g-企业资源计划-ERP)
+    9. [基础设施即代码](../../appendix/glossary.md#g-基础设施即代码)
+    10. [Terraform](../../appendix/glossary.md#g-Terraform)
+    11. [Ansible](../../appendix/glossary.md#g-Ansible)
+    12. [持续集成](../../appendix/glossary.md#g-持续集成)
+    13. [持续交付](../../appendix/glossary.md#g-持续交付)
+
 ## 案例导入
 
 !!! example "案例导入：企业云上自动化运维工具的应用案例"

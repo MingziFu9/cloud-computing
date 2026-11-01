@@ -43,6 +43,24 @@ description: 虚拟化、分布式存储、分布式计算、云网络、云安�
     - **其他课程**：《Linux 操作系统》（第 2 学期）中的常用命令（`ls`、`cd`、`cat`、`vi`）；《计算机网络》（第 2 学期）中的 IP 地址、端口、子网；《Python 编程》（第 1 学期）能运行简单脚本即可（实验 2-3、2-4 用到）。
     - **附录**：[附录 A 实验环境准备](../../appendix/a-labs-env.md) 介绍如何获得一台装好 Docker 的 Linux 环境。
 
+??? abstract "本章概念清单（16 个，点击查看定义和例子）"
+    1. [虚拟机监视器](../../appendix/glossary.md#g-虚拟机监视器)
+    2. [容器](../../appendix/glossary.md#g-容器)
+    3. [快照](../../appendix/glossary.md#g-快照)
+    4. [虚拟机迁移](../../appendix/glossary.md#g-虚拟机迁移)
+    5. [对象存储](../../appendix/glossary.md#g-对象存储)
+    6. [文件存储](../../appendix/glossary.md#g-文件存储)
+    7. [块存储](../../appendix/glossary.md#g-块存储)
+    8. [纠删码](../../appendix/glossary.md#g-纠删码)
+    9. [MapReduce](../../appendix/glossary.md#g-MapReduce)
+    10. [Spark](../../appendix/glossary.md#g-Spark)
+    11. [软件定义网络](../../appendix/glossary.md#g-软件定义网络)
+    12. [私有网络](../../appendix/glossary.md#g-私有网络)
+    13. [弹性 IP](../../appendix/glossary.md#g-弹性-IP)
+    14. [安全组](../../appendix/glossary.md#g-安全组)
+    15. [等级保护制度](../../appendix/glossary.md#g-等级保护制度)
+    16. [桌面云](../../appendix/glossary.md#g-桌面云)
+
 ## 案例导入
 
 !!! example "案例导入：亚马逊的转型之路———云计算核心技术应用案例"

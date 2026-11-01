@@ -90,6 +90,13 @@ nav:
     - "三种桌面云架构": sims/vdi-arch/index.md
     - "虚拟机与容器对比": sims/vm-vs-container/index.md
     - "VPC 拼图": sims/vpc-builder/index.md
+    - "弹性伸缩规则模拟": sims/autoscaling-rules/index.md
+    - "CI/CD 流水线": sims/cicd-pipeline/index.md
+    - "云服务费用计算器": sims/cost-calculator/index.md
+    - "Kubernetes 自愈与扩缩容": sims/k8s-self-healing/index.md
+    - "云上网站的一次访问": sims/website-on-cloud/index.md
+    - "边缘计算与云端计算对比": sims/edge-latency/index.md
+    - "Serverless 与云服务器费用对比": sims/serverless-billing/index.md
   - 学习图谱: learning-graph/index.md
   - 常见问题: faq/index.md
   - "期末模拟卷": mock-exam.md

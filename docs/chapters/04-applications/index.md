@@ -33,8 +33,22 @@ description: 在云上搭建网站、数据分析平台和容器化微服务应�
 培养学生的实践动手能力、爱岗敬业精神，以及团队互助、进取合作的意识，激发学生的求真求实意识；引导其树立正确的科技观与价值观，增强自主创新意识，理解技术发展与国家安全、社会稳定之间的紧密联系；通过理论与案例结合，激发学生为建设科技强国贡献力量的内生动力。
 
 !!! info "先修要求"
-    - **本书前文**：[2.2 虚拟化与容器技术](../02-core-technologies/2-2.md)、[实验 2-2 用 Docker 运行第一个容器](../02-core-technologies/labs.md#2-2)、[3.2.1 云服务器与云存储](../03-platforms-tools/3-2.md#321)、[实验 3-1 在云服务器上部署 Nginx 网站](../03-platforms-tools/labs.md#3-1)。
+    - **本书前文**：[2.1 虚拟化技术](../02-core-technologies/2-1.md)、[实验 2-2 用 Docker 运行一个网站](../02-core-technologies/labs.md#2-2)、[3.2.1 云服务器与云存储](../03-platforms-tools/3-2.md#321)、[实验 3-1 在云服务器上部署 Nginx 网站](../03-platforms-tools/labs.md#3-1)。
     - **其他课程**：《Linux 操作系统》中的软件安装和服务管理命令；《数据库基础与应用》中的建库、建表和 `INSERT`、`SELECT` 语句（实验 4-1）。实验中的 PHP 和 Python 代码都已写好，能看懂注释即可。
+
+??? abstract "本章概念清单（12 个，点击查看定义和例子）"
+    1. [LAMP](../../appendix/glossary.md#g-LAMP)
+    2. [SSL 证书](../../appendix/glossary.md#g-SSL-证书)
+    3. [数据湖](../../appendix/glossary.md#g-数据湖)
+    4. [微服务](../../appendix/glossary.md#g-微服务)
+    5. [Dockerfile](../../appendix/glossary.md#g-Dockerfile)
+    6. [Kubernetes](../../appendix/glossary.md#g-Kubernetes)
+    7. [Docker Compose](../../appendix/glossary.md#g-Docker-Compose)
+    8. [政务云](../../appendix/glossary.md#g-政务云)
+    9. [信创](../../appendix/glossary.md#g-信创)
+    10. [两地三中心](../../appendix/glossary.md#g-两地三中心)
+    11. [工业云](../../appendix/glossary.md#g-工业云)
+    12. [数据即服务](../../appendix/glossary.md#g-数据即服务)
 
 ## 案例导入
 

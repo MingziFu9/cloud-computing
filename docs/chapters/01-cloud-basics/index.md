@@ -42,6 +42,22 @@ description: 云计算的定义与特点、核心概念、IaaS/PaaS/SaaS 服务�
     - **本书前文**：无，本章是全书的起点。
     - **其他课程**：会用浏览器注册网站账号、会上网查资料即可。学过《计算机网络》（第 2 学期）中 IP 地址、带宽的概念会更好理解 1.1.1 节，没学过也不影响。
 
+??? abstract "本章概念清单（14 个，点击查看定义和例子）"
+    1. [云计算](../../appendix/glossary.md#g-云计算)
+    2. [虚拟化](../../appendix/glossary.md#g-虚拟化)
+    3. [分布式计算](../../appendix/glossary.md#g-分布式计算)
+    4. [资源调度](../../appendix/glossary.md#g-资源调度)
+    5. [多租户](../../appendix/glossary.md#g-多租户)
+    6. [弹性伸缩](../../appendix/glossary.md#g-弹性伸缩)
+    7. [按需付费](../../appendix/glossary.md#g-按需付费)
+    8. [基础设施即服务](../../appendix/glossary.md#g-基础设施即服务)
+    9. [平台即服务](../../appendix/glossary.md#g-平台即服务)
+    10. [软件即服务](../../appendix/glossary.md#g-软件即服务)
+    11. [公有云](../../appendix/glossary.md#g-公有云)
+    12. [私有云](../../appendix/glossary.md#g-私有云)
+    13. [混合云](../../appendix/glossary.md#g-混合云)
+    14. [社区云](../../appendix/glossary.md#g-社区云)
+
 ## 案例导入
 
 !!! example "案例导入：“某云店”电商企业云计算技术应用案例"

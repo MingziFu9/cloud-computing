@@ -178,9 +178,12 @@ def other_exercises(text):
 def lab_list(text, word="实验"):
     """本章实验 / 体验：[(编号, 标题, 目的列表), ...]"""
     out = []
-    for title, body in headings(text, 3):
+    for title, body in headings(text, 2) + headings(text, 3):   # 实验标题可以是二级或三级
         m = re.match(rf"^(?:实验|体验|{word}) (\d+-\d+) *(.*)$", title)
         if m:
+            m = re.match(r"^(\S+ \S+) *(.*)$", title)
+            m = (lambda a, b: type("M", (), {"group": lambda self, i: (None, a, b)[i]})())(
+                re.search(r"\d+-\d+", title).group(0), re.sub(r"\s*\{[^}]*\}\s*$", "", re.sub(r"^\S+ \S+ *[★☆]? *", "", title)))
             goal = re.search(r"目的\*\*\n\n((?:\d+\..*\n?)+)", body)
             out.append((m.group(1), m.group(2), [plain(x) for x in list_items(goal.group(1))] if goal else []))
     return out
