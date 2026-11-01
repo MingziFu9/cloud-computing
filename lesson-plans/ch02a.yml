@@ -1,0 +1,92 @@
+# 第 2 章第一讲教案底稿（编者已补写完整），python tools/make_lesson_plan.py build 2a 生成 Word。
+chapter: 2
+part: a
+online: 5
+offline: 1
+methods:
+- 讲授法
+- 案例教学法
+- 演示法（交互动画）
+- 线上自主学习
+- 实验教学法
+objectives:
+  knowledge:
+  - 掌握虚拟化技术：主机、虚拟机、Hypervisor，全虚拟化与半虚拟化
+  - 了解 VMware、Docker、KVM 三种代表产品
+  skill:
+  - 具备虚拟化技术的基础能力：能在云平台上创建云服务器、打快照并回滚
+  - 能用 Docker 拉取镜像、运行和管理容器
+  quality:
+  - 培养做事严谨、着眼细节的工匠精神：操作前先打快照，养成“可回退”的习惯
+  - 了解 KVM 等开源技术在国产云平台中的应用，增强科技报国之志
+key_points:
+- Hypervisor 的两种类型
+- 虚拟机与容器的区别
+- 快照与迁移的用途
+- Docker 的镜像、容器、仓库
+difficulties:
+- point: 理解容器“共享宿主机内核”与虚拟机“各有完整操作系统”的区别
+  solution: 用“公寓与酒店房间”类比，配合动画“虚拟机与容器对比”比较内存和启动时间，再在实验 2-2 中亲自体验容器秒级启动
+- point: 区分原生型和宿主型 Hypervisor
+  solution: 对照学生熟悉的 VMware Workstation（宿主型）与云平台使用的 ESXi、KVM（原生型），画出两种层次图
+process:
+- phase: 课前（线上）
+  steps:
+  - name: 自主预习
+    minutes: 90
+    content: 阅读 2.1.1 虚拟化的架构与类型、2.1.2 三种代表产品，完成随堂小测；操作动画“虚拟机与容器对比”
+    teacher: 发布预习任务；思考题：一台物理服务器怎样同时给 10 个用户使用？
+    student: 阅读教材、操作动画，在讨论区回答
+    intent: 带着问题进课堂
+- phase: 课中（线下面授 / 直播，1 学时）
+  steps:
+  - name: 情景导入
+    minutes: 5
+    content: 一栋大楼怎样隔成很多套公寓？物业怎么管？酒店房间和公寓有什么不同？
+    teacher: 提出生活或工作中的问题，引出本次课主题
+    student: 回答问题，联系自身经验
+    intent: 激发兴趣，建立直觉
+  - name: 讲授与演示
+    minutes: 20
+    content: Hypervisor 两种类型、全虚拟化与半虚拟化；虚拟机与容器对比（动画）；快照与迁移（动画“快照与迁移”）
+    teacher: 讲解并现场操作动画
+    student: 观察动画，回答提问
+    intent: 突破虚拟机与容器的区别
+  - name: 实验演示
+    minutes: 10
+    content: 演示实验 2-2 的关键命令：docker pull / run / ps / stop / rm
+    teacher: 在终端演示，讲解 -d、-p 等参数
+    student: 跟着记录命令和参数含义
+    intent: 为线上实验做准备
+  - name: 课堂练习
+    minutes: 5
+    content: 课件中的课堂练习 4 题（单选、判断）
+    teacher: 组织作答，讲评错因
+    student: 举手或在线作答
+    intent: 即时检验重点掌握情况
+  - name: 小结
+    minutes: 5
+    content: 回顾虚拟化要点，布置实验 2-1、2-2 和 2.1.3 节自学
+    teacher: 带领学生回顾要点，布置课后任务
+    student: 复述要点，记录任务
+    intent: 形成知识结构
+- phase: 课后（线上）
+  steps:
+  - name: 自学
+    minutes: 45
+    content: 阅读 2.1.3 虚拟机的使用，完成随堂小测
+    teacher: 在讨论区答疑
+    student: 整理创建、快照、迁移的步骤
+    intent: 掌握虚拟机的基本使用
+  - name: 线上实验
+    minutes: 90
+    content: 实验 2-1 创建云服务器并打快照；实验 2-2 用 Docker 运行一个网站
+    teacher: 提供实验指导，收集常见错误并答疑
+    student: 按步骤完成实验，填写记录表
+    intent: 形成虚拟化和容器的动手技能
+homework:
+- 阅读并完成 2.1 节随堂小测
+- 简答题：比较虚拟机和容器，各说出两个适合的场景
+- 实验报告：实验 2-1、实验 2-2
+assessment: 线上学习进度与随堂小测（20%）、课堂练习与讨论（20%）、课后练习（30%）、实验报告（30%），计入平时成绩
+reflection: ''

@@ -1,0 +1,94 @@
+# 第 5 章教案底稿（编者已补写完整），python tools/make_lesson_plan.py build 5 生成 Word。
+chapter: 5
+online: 3
+offline: 1
+methods:
+- 讲授法
+- 案例教学法
+- 演示法（交互动画）
+- 线上自主学习
+- 实验教学法
+objectives:
+  knowledge:
+  - 了解云计算技术的未来趋势：边缘计算、Serverless、大模型与云计算
+  - 了解边缘计算与物联网技术
+  - 了解与云计算技术相关的证书
+  skill:
+  - 掌握人工智能与云计算的结合点
+  - 掌握与云计算技术相关的职业发展路径，能制订自己的学习和考证计划
+  quality:
+  - 树立诚实守信、保守秘密、遵守法律的职业道德底线
+  - 培养家国情怀和社会责任感，以工匠精神适应未来职业需求
+key_points:
+- 边缘计算的作用与云边协同
+- Serverless 的特点与冷启动
+- 大模型与云计算的关系
+- 云计算相关岗位与认证
+- 职业道德规范
+difficulties:
+- point: 判断什么业务适合 Serverless、什么业务适合云服务器
+  solution: 用动画“Serverless 与云服务器费用对比”拖动调用量，找到费用分界点
+- point: 理解边缘计算为什么能降低延迟、节省带宽
+  solution: 用动画“边缘计算与云端计算对比”调整设备数量和网络延迟，比较两种方案
+process:
+- phase: 课前（线上）
+  steps:
+  - name: 自主预习
+    minutes: 45
+    content: 阅读 5.1 云计算的未来趋势，完成随堂小测；操作动画“边缘计算与云端计算对比”
+    teacher: 发布预习任务；思考题：自动驾驶汽车为什么不能把所有数据都传到云端再处理？
+    student: 阅读教材、操作动画
+    intent: 带着问题进课堂
+- phase: 课中（线下面授 / 直播，1 学时）
+  steps:
+  - name: 情景导入
+    minutes: 5
+    content: 自动驾驶等得起云端回复吗？毕业后我能做什么？
+    teacher: 提出生活或工作中的问题，引出本次课主题
+    student: 回答问题，联系自身经验
+    intent: 激发兴趣，建立直觉
+  - name: 讲授与演示
+    minutes: 20
+    content: 边缘计算与云边协同（动画）；人工智能与云；Serverless 与冷启动（动画“Serverless 与云服务器费用对比”）；大模型与云
+    teacher: 讲解并演示动画
+    student: 调整动画参数，回答提问
+    intent: 理解四个发展方向
+  - name: 案例讨论
+    minutes: 10
+    content: 岗位与认证：对照云运维工程师的技能要求自评；“删库”案例：问题出在哪里？
+    teacher: 引导自评，组织讨论，强调权限回收和法律底线
+    student: 自评、讨论并发言
+    intent: 规划职业发展，树立职业道德
+  - name: 课堂练习
+    minutes: 5
+    content: 课件中的课堂练习 3 题（单选、判断）
+    teacher: 组织作答，讲评错因
+    student: 举手或在线作答
+    intent: 即时检验重点掌握情况
+  - name: 小结
+    minutes: 5
+    content: 回顾全课程五章主线，布置课后练习和期末复习
+    teacher: 带领学生回顾要点，布置课后任务
+    student: 复述要点，记录任务
+    intent: 形成知识结构
+- phase: 课后（线上）
+  steps:
+  - name: 自学
+    minutes: 45
+    content: 阅读 5.2 职业发展与认证，完成随堂小测；选做实验 5-1 在函数计算上部署第一个函数
+    teacher: 在讨论区答疑
+    student: 制订自己的学习和考证计划
+    intent: 职业规划
+  - name: 课后巩固
+    minutes: 45
+    content: 完成第 5 章课后练习，做全书模拟卷进行期末复习
+    teacher: 批改作业，答疑
+    student: 完成练习和模拟卷
+    intent: 巩固知识，准备期末
+homework:
+- 第 5 章课后练习：单选、多选、判断题在线作答
+- 简答题：对照云运维工程师的技能要求，写出你已具备和还需提升的技能
+- 期末复习：完成全书模拟卷
+- 实验 5-1（选做）
+assessment: 线上学习进度与随堂小测（20%）、课堂练习与讨论（20%）、课后练习（30%）、实验报告（30%），计入平时成绩
+reflection: ''

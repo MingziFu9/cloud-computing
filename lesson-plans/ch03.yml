@@ -1,0 +1,94 @@
+# 第 3 章教案底稿（编者已补写完整），python tools/make_lesson_plan.py build 3 生成 Word。
+chapter: 3
+online: 5
+offline: 1
+methods:
+- 讲授法
+- 案例教学法
+- 演示法（交互动画）
+- 线上自主学习
+- 实验教学法
+objectives:
+  knowledge:
+  - 了解主流云服务平台的基础知识
+  - 了解 SaaS 层服务的模式与使用，了解模型即服务 MaaS
+  - 了解自动化运维工具和 CI/CD 流水线
+  skill:
+  - 掌握 IaaS 层服务的创建与管理，能够操作和使用主流公有云平台的云服务器
+  - 掌握 PaaS 层服务的使用场景
+  - 能够调用大模型 API，能读懂简单的 CI/CD 流水线配置
+  quality:
+  - 培养做事严谨、精益求精的工匠精神：子账号最小权限、密钥不外泄
+  - 培养成本意识和团队协作意识
+key_points:
+- 计费模式的选择与成本优化
+- 云服务器使用的七个环节
+- 消息队列与 API 网关的作用
+- MaaS 的框架与优势
+- CI/CD 流水线
+difficulties:
+- point: 根据业务特点选择计费模式
+  solution: 用动画“云服务费用计算器”现场比较按量、包年包月、抢占式三种方式一年的费用
+- point: 理解消息队列的“异步解耦、削峰填谷”
+  solution: 用“快递驿站”类比，配合“双 11”下单高峰的例子说明
+process:
+- phase: 课前（线上）
+  steps:
+  - name: 自主预习
+    minutes: 90
+    content: 阅读 3.1 主流云平台入门、3.2 IaaS 层服务，完成随堂小测；操作动画“云服务费用计算器”
+    teacher: 发布预习任务；思考题：一个只在白天运行的网站，用哪种计费方式最省钱？
+    student: 阅读教材、操作动画
+    intent: 带着问题进课堂
+- phase: 课中（线下面授 / 直播，1 学时）
+  steps:
+  - name: 情景导入
+    minutes: 5
+    content: 买车之前先比品牌、选配置、算油费；用云也一样
+    teacher: 提出生活或工作中的问题，引出本次课主题
+    student: 回答问题，联系自身经验
+    intent: 激发兴趣，建立直觉
+  - name: 讲授与演示
+    minutes: 20
+    content: 计费模式与成本优化（动画）；云服务器七个环节；消息队列、API 网关；容器服务、函数计算、弹性伸缩（动画“弹性伸缩规则模拟”）；SaaS 与 MaaS
+    teacher: 讲解并演示动画
+    student: 跟着动画计算费用、设置伸缩规则
+    intent: 突破计费模式和消息队列两个难点
+  - name: 实验演示
+    minutes: 10
+    content: 演示实验 3-2 调用通义千问 API：获取 API Key、设置环境变量、运行程序；简介 CI/CD 流水线（动画）
+    teacher: 现场运行程序，强调密钥安全
+    student: 记录步骤，提问
+    intent: 为线上实验做准备
+  - name: 课堂练习
+    minutes: 5
+    content: 课件中的课堂练习 3 题（单选、判断）
+    teacher: 组织作答，讲评错因
+    student: 举手或在线作答
+    intent: 即时检验重点掌握情况
+  - name: 小结
+    minutes: 5
+    content: 用知识导图回顾第 3 章，布置实验 3-1、3-2 和 3-3（选做）
+    teacher: 带领学生回顾要点，布置课后任务
+    student: 复述要点，记录任务
+    intent: 形成知识结构
+- phase: 课后（线上）
+  steps:
+  - name: 自学
+    minutes: 45
+    content: 阅读 3.3 PaaS 层服务、3.4 SaaS 层服务、3.5 自动化运维工具，完成随堂小测
+    teacher: 在讨论区答疑
+    student: 整理 PaaS、SaaS 典型服务
+    intent: 完成全章学习
+  - name: 线上实验
+    minutes: 90
+    content: 实验 3-1 在云服务器上部署 Nginx 网站；实验 3-2 调用大模型 API；实验 3-3 用 GitHub Actions 搭建持续集成流水线（选做）
+    teacher: 提供实验指导，线上答疑
+    student: 按步骤完成实验，填写记录表
+    intent: 形成使用云服务的动手能力
+homework:
+- 第 3 章课后练习：单选、多选、判断题在线作答
+- 简答题：为一个“白天营业、晚上关闭”的网上商城选择计费模式并说明理由
+- 实验报告：实验 3-1、实验 3-2（实验 3-3 选做）
+assessment: 线上学习进度与随堂小测（20%）、课堂练习与讨论（20%）、课后练习（30%）、实验报告（30%），计入平时成绩
+reflection: ''

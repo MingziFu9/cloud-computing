@@ -81,13 +81,16 @@ def convert(md, page="index.md"):
     md = re.sub(r'<iframe[^>]*src="[^"]*sims/([\w-]+)/main\.html"[^>]*title="([^"]*)"[^>]*></iframe>', sim_figure, md)
     md = re.sub(r'<iframe[^>]*title="([^"]*)"[^>]*></iframe>', r"> 【交互动画】\1：请在网页版查看。", md)
     md = re.sub(r"^.*\{ \.sim-caption \}\n", "", md, flags=re.M)
+    md = re.sub(r"^.*\n\{ \.fig-caption \}\n", "", md, flags=re.M)      # 图题已由图片的 alt 文字给出
+    md = re.sub(r"^(.*)\n\{ \.tab-caption \}", r"**\1**", md, flags=re.M)
+    md = re.sub(r'<p class="qr-res">(.*?)</p>', r"> \1", md)
     md = re.sub(r'<sup class="cite">\[\[(\d+)\]\]\([^)]*\)</sup>', r"^[\1]^", md)
     md = re.sub(r'<span class="ref-note">(.*?)</span>', r"\1", md)
     md = re.sub(r"<span id=\"[^\"]*\"></span>", "", md)
     md = re.sub(r"^</?div[^>]*>\s*$", "", md, flags=re.M)
     # 术语链接、站内链接只留文字
-    md = re.sub(r"\[([^\]]+)\]\((?!https?:)[^)]*\)", r"\1", md)
-    md = re.sub(r"\{ *[.#:a-z][^}]*\}", "", md)
+    md = re.sub(r'\[([^\]]+)\]\((?!https?:)[^)\s]*(?: "[^"]*")?\)', r"\1", md)   # 链接标题（术语提示）里可能有括号
+    md = re.sub(r"\{ ?(?:[.#]|[a-z_]+=)[^}]*\}", "", md)                  # 只去掉 { .term }、{#121}、{ loading=lazy } 这类属性，保留代码里的花括号
     # 提示框：!!! / ??? 类型 "标题" + 缩进正文 → 引用块
     lines, out, i = md.split("\n"), [], 0
     while i < len(lines):
@@ -105,6 +108,41 @@ def convert(md, page="index.md"):
     return "\n".join(out).replace("{WIDTH=", "{width=")   # 图片宽度用大写写入，躲过上面去掉属性的替换
 
 
+def set_cjk_font(docx, font="Microsoft YaHei"):
+    """pandoc 默认把中文也交给西文主题字体，部分软件（如 LibreOffice）会显示成方框；改为指定中文字体"""
+    import shutil
+    import zipfile
+    tmp = docx.with_suffix(".tmp.docx")
+    with zipfile.ZipFile(docx) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "word/styles.xml":
+                xml = data.decode("utf-8")
+                xml = re.sub(r'w:eastAsiaTheme="[^"]*"', f'w:eastAsia="{font}"', xml)
+                xml = xml.replace('<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" />',
+                                  f'<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:eastAsia="{font}" />')
+                data = xml.encode("utf-8")
+            zout.writestr(item, data)
+    shutil.move(tmp, docx)
+
+
+def demote_headings(md):
+    """多页章节：章首页的“# 第 N 章”是一级标题，各节页、实验页、小结页整体降一级，Word 目录才有层次"""
+    out, fence = [], False
+    for line in md.split("\n"):
+        if line.startswith("```"):
+            fence = not fence
+        if not fence and re.match(r"^#{1,5} ", line):
+            line = "#" + line
+        out.append(line)
+    return "\n".join(out)
+
+
+def page_md(p):
+    md = convert((DOCS / p).read_text(encoding="utf-8"), p)
+    return demote_headings(md) if p.startswith("chapters/") and not p.endswith("/index.md") else md
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     args = [a for a in sys.argv[1:] if a != "--pdf"]
@@ -113,13 +151,16 @@ def main():
     else:
         pages, name = nav_pages(), course()["title"]
     title = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=_Loader)["site_name"]
-    body = "\n\n".join(convert((DOCS / p).read_text(encoding="utf-8"), p) for p in pages)
+    body = "\n\n".join(page_md(p) for p in pages)
     tmp = OUT / f"{name}.md"
     tmp.write_text(f"---\ntitle: {title}\n---\n\n{body}", encoding="utf-8")
     dst = OUT / f"{name}.docx"
-    subprocess.run(["pandoc", str(tmp), "-f", "markdown+tex_math_single_backslash", "-o", str(dst),
+    lua = OUT / "br.lua"   # 表格单元格里的 <br> 换成真正的换行（否则 Word 里会被丢掉，几条内容挤在一起）
+    lua.write_text('function RawInline(el)\n  if el.format == "html" and el.text:match("^<br%s*/?>$") then return pandoc.LineBreak() end\nend\n', encoding="utf-8")
+    subprocess.run(["pandoc", str(tmp), "-f", "markdown+tex_math_single_backslash", "-o", str(dst), "--lua-filter", str(lua),
                     "--toc", "--toc-depth=2", "-M", "toc-title=目录", "--resource-path", str(DOCS)], check=True)
-    print(f"已导出 {dst.relative_to(ROOT)}（{len(pages)} 页）")
+    set_cjk_font(dst)
+    print(f"已导出 {dst.relative_to(ROOT)}（{len(pages)} 个页面）")
     if "--pdf" in sys.argv:
         subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(OUT), str(dst)], check=True)
 

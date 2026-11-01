@@ -39,8 +39,11 @@ def chapter_path(ch):
 
 def chapter_pages(ch):
     """一章的全部页面（按阅读顺序）：章首页、各节页、本章实验、本章小结与练习。
-    course.yml 里没写 pages 的章只有 index.md 一页（与系列其他教材相同）。"""
+    course.yml 里没写 pages 的章只有 index.md 一页（与系列其他教材相同）。
+    分讲（deck() 返回的 part）只含本讲的各节页、本章实验页（只留本讲的实验）和小结练习页（课堂练习从中挑选）。"""
     d = CHAPTERS / ch["dir"]
+    if ch.get("part"):
+        return [d / f for f in [p["file"] for p in ch["pages"]] + ["labs.md", "summary.md"] if (d / f).exists()]
     files = ["index.md"] + [p["file"] for p in ch.get("pages", [])]
     if ch.get("pages"):
         files += ["labs.md", "summary.md"]
@@ -53,7 +56,7 @@ def safe_name(s):
 
 
 def chapter_heading(ch):
-    return f"第 {ch['num']} 章 {ch['title']}"
+    return f"第 {ch['num']} 章 {ch['title']}" + (f"（{'一二三四五六'[ch['part_no'] - 1]}）{ch['part_title']}" if ch.get("part") else "")
 
 
 def chapter_by_num(num, c=None):
@@ -88,7 +91,42 @@ def replace_between(text, start, end, block):
 # ---------- 读章节内容（课件、教案、导出共用） ----------
 
 def chapter_text(ch):
-    return "\n\n".join(front_matter(p.read_text(encoding="utf-8"))[1] for p in chapter_pages(ch))
+    out = []
+    for p in chapter_pages(ch):
+        t = front_matter(p.read_text(encoding="utf-8"))[1]
+        if ch.get("part") and p.name == "labs.md":
+            parts = re.split(r"(?m)^(?=## )", t)
+            keep = [x for x in parts[1:] if any(re.match(rf"## \S+ {re.escape(i)} ", x) for i in ch.get("lab_ids", []))]
+            t = parts[0] + "".join(keep) if keep else ""
+        out.append(t)
+    return "\n\n".join(out)
+
+
+def deck_ids(c=None):
+    """课件 / 教案的编号：一般一章一个（"3"）；course.yml 里写了 parts 的章按讲拆分（"2a"、"2b"…）。"""
+    c = c or course()
+    return [x for ch in c["chapters"] for x in ([f"{ch['num']}{p['id']}" for p in ch["parts"]] if ch.get("parts") else [str(ch["num"])])]
+
+
+def deck(token, c=None):
+    """"3" → 第 3 章；"2a" → 第 2 章的第一讲（合并 parts 里写的学时、节、实验）。
+    返回的字典多出 part（a/b/…）、part_no（1/2/…）、part_title、lab_ids、tag（文件名用：第02章 或 第02章-1）。"""
+    m = re.match(r"^(\d+)([a-z]?)$", str(token))
+    if not m:
+        raise SystemExit(f"编号写法不对：{token}（应为 3 或 2a）")
+    ch = dict(chapter_by_num(int(m.group(1)), c))
+    ch["tag"] = f"第{ch['num']:02d}章"
+    if m.group(2):
+        parts = ch.get("parts") or []
+        k = next((i for i, p in enumerate(parts) if p["id"] == m.group(2)), None)
+        if k is None:
+            raise SystemExit(f"第 {ch['num']} 章没有第 {m.group(2)} 讲")
+        p = parts[k]
+        ch.update({"part": p["id"], "part_no": k + 1, "part_title": p["title"], "lab_ids": p.get("labs", []),
+                   "pages": [pg for pg in ch["pages"] if pg["file"][:-3] in p["pages"]],
+                   "theory": p["theory"], "lab": p["lab"], "offline": p["offline"]})
+        ch["tag"] += f"-{k + 1}"   # 第02章-1
+    return ch
 
 
 def plain(s):

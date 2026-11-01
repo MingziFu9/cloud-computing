@@ -4,6 +4,7 @@
     python tools/make_slides.py draft 3         # 从第 3 章正文生成课件底稿 slides/ch03.md（已有则不覆盖，加 --force 覆盖）
     python tools/make_slides.py build 3         # 把 slides/ch03.md 排版成 build/课件/第03章 章名.pptx
     python tools/make_slides.py build all       # 全部章节
+    python tools/make_slides.py build 2a        # course.yml 里写了 parts 的章按讲拆分：slides/ch02a.md → 第02章-1 ….pptx
 
 流程：先 draft 生成底稿，再把底稿精简成“一页一个要点”（底稿是从正文机械摘出来的，不能直接用），
 最后 build。课件里的 Mermaid 图和动画截图来自 npm run figures（tools/render_figures.mjs），
@@ -20,7 +21,7 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
-from common import (BUILD, ROOT, admonition, chapter_by_num, chapter_heading, chapter_path, chapter_text, course,
+from common import (BUILD, ROOT, admonition, chapter_by_num, deck, deck_ids, chapter_heading, chapter_path, chapter_text, course,
                     front_matter, headings, lab_list, list_items, mermaid_blocks, mermaid_png, parse_quizzes,
                     plain, qr_png, safe_name, section, sim_png, sims_in, site_url)
 
@@ -403,6 +404,8 @@ class Deck:
         tf = box(s, MARGIN, Inches(2.5), W - 2 * MARGIN, Inches(1.6))
         tf.word_wrap = True
         add_rich(tf.paragraphs[0], self.ch["title"], 44, "FFFFFF", True)
+        if self.ch.get("part"):
+            add_rich(tf.add_paragraph(), f"第{'一二三四五六'[self.ch['part_no'] - 1]}讲 {self.ch['part_title']}", 26, "FFFFFF")
         h = self.ch
         info = f"理论 {h['theory']} 学时" + (f" · 实验 {h['lab']} 学时" if h["lab"] else "")
         tf = box(s, MARGIN, Inches(4.5), W - 2 * MARGIN, Inches(1.2))
@@ -562,26 +565,32 @@ class Deck:
         return self.prs
 
 
-def build(num):
+def build(token):
     c = course()
-    ch = chapter_by_num(num, c)
-    src = SLIDES / f"ch{num:02d}.md"
+    ch = deck(token, c)
+    num = ch["num"]
+    src = SLIDES / f"ch{num:02d}{ch.get('part', '')}.md"
     if not src.exists():
         print(f"没有 {src.relative_to(ROOT)}，先用正文自动生成底稿（课堂使用前请精简）")
         draft(num)
-    deck = Deck(c, ch)
-    prs = deck.build(parse_deck(src.read_text(encoding="utf-8")))
-    out = BUILD / "课件" / f"第{num:02d}章 {safe_name(ch['title'])}.pptx"
+    dk = Deck(c, ch)
+    prs = dk.build(parse_deck(src.read_text(encoding="utf-8")))
+    name = ch["title"] + (f"（{ch['part_title']}）" if ch.get("part") else "")
+    out = BUILD / "课件" / f"{ch['tag']} {safe_name(name)}.pptx"
     out.parent.mkdir(parents=True, exist_ok=True)
     prs.save(out)
-    note = f"（缺少{'、'.join(sorted(deck.missing))}，先运行 npm run figures）" if deck.missing else ""
-    print(f"已生成 {out.relative_to(ROOT)}，共 {deck.page} 页{note}")
+    note = f"（缺少{'、'.join(sorted(dk.missing))}，先运行 npm run figures）" if dk.missing else ""
+    print(f"已生成 {out.relative_to(ROOT)}，共 {dk.page} 页{note}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in ("draft", "build"):
         print(__doc__)
         sys.exit(1)
-    nums = [ch["num"] for ch in course()["chapters"]] if sys.argv[2] == "all" else [int(sys.argv[2])]
-    for n in nums:
-        draft(n, "--force" in sys.argv) if sys.argv[1] == "draft" else build(n)
+    if sys.argv[1] == "draft":
+        nums = [ch["num"] for ch in course()["chapters"]] if sys.argv[2] == "all" else [int(sys.argv[2])]
+        for n in nums:
+            draft(n, "--force" in sys.argv)
+    else:
+        for t in (deck_ids() if sys.argv[2] == "all" else [sys.argv[2]]):
+            build(t)

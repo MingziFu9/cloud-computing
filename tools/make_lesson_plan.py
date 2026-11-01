@@ -21,7 +21,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-from common import (BUILD, ROOT, admonition, chapter_by_num, chapter_heading, chapter_text, course, headings,
+from common import (BUILD, ROOT, admonition, chapter_by_num, deck, deck_ids, chapter_heading, chapter_text, course, headings,
                     lab_list, list_items, other_exercises, parse_quizzes, plain, safe_name, section, sims_in,
                     site_url)
 
@@ -44,11 +44,12 @@ def split_hours(c, ch):
     return online, total - online
 
 
-def draft(num, force=False):
+def draft(token, force=False):
     c = course()
-    ch = chapter_by_num(num, c)
+    ch = deck(token, c)
+    num = ch["num"]
     text = chapter_text(ch)
-    path = PLANS / f"ch{num:02d}.yml"
+    path = PLANS / f"ch{num:02d}{ch.get('part', '')}.yml"
     if path.exists() and not force:
         print(f"{path.relative_to(ROOT)} 已存在，没有覆盖（要重新生成请加 --force）")
         return
@@ -218,10 +219,11 @@ def bullet_lines(doc, items, numbered=True):
         para(doc, f"{k}. {x}" if numbered else f"· {x}")
 
 
-def build(num):
+def build(token):
     c = course()
-    ch = chapter_by_num(num, c)
-    src = PLANS / f"ch{num:02d}.yml"
+    ch = deck(token, c)
+    num = ch["num"]
+    src = PLANS / f"ch{num:02d}{ch.get('part', '')}.yml"
     if not src.exists():
         print(f"没有 {src.relative_to(ROOT)}，先自动生成底稿")
         draft(num)
@@ -275,7 +277,7 @@ def build(num):
 
     heading(doc, "三、教学资源")
     res = [f"网页教材：{chapter_heading(ch)}（{site_url(c)}chapters/{ch['dir']}/）",
-           f"课件：第{num:02d}章 PowerPoint 课件"]
+           f"课件：{ch['tag']} PowerPoint 课件"]
     sims = sims_in(text)
     if sims:
         res.append("交互动画：" + "；".join(f"{t}（{site_url(c)}sims/{n}/）" for n, t in sims))
@@ -318,7 +320,8 @@ def build(num):
     for _ in range(4):
         para(doc, "")
 
-    out = BUILD / "教案" / f"第{num:02d}章 {safe_name(ch['title'])} 教案.docx"
+    name = ch["title"] + (f"（{ch['part_title']}）" if ch.get("part") else "")
+    out = BUILD / "教案" / f"{ch['tag']} {safe_name(name)} 教案.docx"
     out.parent.mkdir(parents=True, exist_ok=True)
     doc.save(out)
     todo = sum(l.count(TODO) for l in src.read_text(encoding="utf-8").split("\n") if not l.lstrip().startswith("#"))
@@ -329,6 +332,5 @@ if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in ("draft", "build"):
         print(__doc__)
         sys.exit(1)
-    nums = [ch["num"] for ch in course()["chapters"]] if sys.argv[2] == "all" else [int(sys.argv[2])]
-    for n in nums:
-        draft(n, "--force" in sys.argv) if sys.argv[1] == "draft" else build(n)
+    for t in (deck_ids() if sys.argv[2] == "all" else [sys.argv[2]]):
+        draft(t, "--force" in sys.argv) if sys.argv[1] == "draft" else build(t)

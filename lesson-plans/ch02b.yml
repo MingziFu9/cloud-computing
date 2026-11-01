@@ -1,0 +1,92 @@
+# 第 2 章第二讲教案底稿（编者已补写完整），python tools/make_lesson_plan.py build 2b 生成 Word。
+chapter: 2
+part: b
+online: 4
+offline: 1
+methods:
+- 讲授法
+- 案例教学法
+- 演示法（交互动画）
+- 线上自主学习
+- 实验教学法
+objectives:
+  knowledge:
+  - 掌握分布式存储技术：六个基本特征，对象存储、文件存储、块存储
+  - 了解分布式计算技术：进程间通信、RPC、MapReduce、Spark
+  skill:
+  - 能够根据业务场景选择合适的存储类型
+  - 能用 Python 程序存取对象存储中的文件，能说出 MapReduce 的四个阶段
+  quality:
+  - 通过多副本、纠删码的设计理解“可靠性来自冗余”的工程思想，培养严谨细致的职业精神
+  - 培养分工协作意识：像分布式计算一样“拆任务、合结果”
+key_points:
+- 分布式存储的基本特征
+- 对象存储、文件存储、块存储的区别和适用场景
+- 多副本与纠删码
+- MapReduce 的分片、Map、Shuffle、Reduce
+difficulties:
+- point: 理解 Shuffle 阶段“同一个键一定交给同一个 Reduce”
+  solution: 用动画“MapReduce 词频统计”单步执行，让学生预测每个词落到哪个 Reduce；再运行实验 2-4 的十几行 Python 程序验证
+- point: 区分三种存储类型
+  solution: 用“停车场取车牌、共享文件夹、网络硬盘”类比，配合动画“三种存储怎么存”，并让学生给图片、共享文档、数据库各选一种存储
+process:
+- phase: 课前（线上）
+  steps:
+  - name: 自主预习
+    minutes: 90
+    content: 阅读 2.2 分布式存储技术，完成随堂小测；操作动画“多副本与纠删码”“三种存储怎么存”
+    teacher: 发布预习任务；思考题：一块硬盘坏了，网盘里的照片为什么不会丢？
+    student: 阅读教材、操作动画，在讨论区回答
+    intent: 带着问题进课堂
+- phase: 课中（线下面授 / 直播，1 学时）
+  steps:
+  - name: 情景导入
+    minutes: 5
+    content: 连锁超市为什么把货物分散在各地的仓库？1 万份试卷怎样一天改完？
+    teacher: 提出生活或工作中的问题，引出本次课主题
+    student: 回答问题，联系自身经验
+    intent: 激发兴趣，建立直觉
+  - name: 讲授与演示
+    minutes: 20
+    content: 分布式存储特征、三种存储类型；多副本与纠删码（动画）；MapReduce 四个阶段（动画“MapReduce 词频统计”）；Spark 为什么快
+    teacher: 讲解并单步演示动画
+    student: 预测动画结果，回答提问
+    intent: 突破 Shuffle 和存储类型两个难点
+  - name: 讨论
+    minutes: 10
+    content: 给“短视频平台、企业共享盘、银行交易数据库”各选一种存储，说明理由
+    teacher: 组织讨论，点评
+    student: 小组讨论并汇报
+    intent: 在情境中运用存储类型
+  - name: 课堂练习
+    minutes: 5
+    content: 课件中的课堂练习 4 题（单选、判断）
+    teacher: 组织作答，讲评错因
+    student: 举手或在线作答
+    intent: 即时检验重点掌握情况
+  - name: 小结
+    minutes: 5
+    content: 回顾存储与计算要点，布置实验 2-3（必做）、2-4（选做）
+    teacher: 带领学生回顾要点，布置课后任务
+    student: 复述要点，记录任务
+    intent: 形成知识结构
+- phase: 课后（线上）
+  steps:
+  - name: 自学
+    minutes: 45
+    content: 阅读 2.3 分布式计算技术，完成随堂小测
+    teacher: 在讨论区答疑
+    student: 整理 MapReduce 四个阶段
+    intent: 理解分布式计算原理
+  - name: 线上实验
+    minutes: 45
+    content: 实验 2-3 搭建对象存储并用 Python 存取文件；实验 2-4 用 Python 模拟 MapReduce 词频统计（选做）
+    teacher: 提供实验指导，线上答疑
+    student: 按步骤完成实验，填写记录表
+    intent: 把存储和计算概念落到操作上
+homework:
+- 阅读并完成 2.2、2.3 节随堂小测
+- 简答题：用自己的话描述 MapReduce 词频统计的四个阶段
+- 实验报告：实验 2-3（实验 2-4 选做）
+assessment: 线上学习进度与随堂小测（20%）、课堂练习与讨论（20%）、课后练习（30%）、实验报告（30%），计入平时成绩
+reflection: ''

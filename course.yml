@@ -46,6 +46,10 @@ chapters:
       - {file: 2-4.md, title: 2.4 云网络技术}
       - {file: 2-5.md, title: 2.5 云安全技术}
       - {file: 2-6.md, title: 2.6 桌面云技术}
+    parts:                             # 本章内容多，课件和教案分三讲（第02章-1、-2、-3）
+      - {id: a, title: 虚拟化技术, pages: [2-1], labs: [2-1, 2-2], theory: 4, lab: 2, offline: 1}
+      - {id: b, title: 分布式存储与分布式计算, pages: [2-2, 2-3], labs: [2-3, 2-4], theory: 4, lab: 1, offline: 1}
+      - {id: c, title: 云网络、云安全与桌面云, pages: [2-4, 2-5, 2-6], labs: [], theory: 3, lab: 0, offline: 1}
   - dir: 03-platforms-tools
     title: 云计算平台与工具
     short: 平台与工具
