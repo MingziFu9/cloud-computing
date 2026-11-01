@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弹性伸缩规则模拟</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.ctl { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:2px 12px; }
+.ctl .row span:first-child { width:6.5em; font-size:12.5px; }
+svg { width:100%; height:auto; display:block; }
+.legend span { display:inline-flex; align-items:center; gap:4px; margin-right:10px; font-size:12px; }
+.legend i { width:14px; height:4px; display:inline-block; border-radius:2px; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:6px; margin-top:6px; }
+.stats .box { text-align:center; padding:6px; margin:0; }
+.stats b { display:block; font-size:18px; }
+</style>
+</head>
+<body>
+<h1>弹性伸缩规则模拟：CPU 忙了加机器，闲了减机器</h1>
+<div class="sub">每台实例能处理 100 个单位的负载。每 10 分钟检查一次平均 CPU 利用率：高于扩容阈值就加 1 台，低于缩容阈值就减 1 台；每次伸缩后进入冷却时间，期间不再伸缩。</div>
+<div class="ctl">
+  <div class="row"><span>扩容阈值</span><input type="range" id="up" min="50" max="95" step="5" value="70"><span class="mono" id="upv"></span></div>
+  <div class="row"><span>缩容阈值</span><input type="range" id="down" min="10" max="60" step="5" value="30"><span class="mono" id="downv"></span></div>
+  <div class="row"><span>冷却时间</span><input type="range" id="cool" min="0" max="60" step="10" value="20"><span class="mono" id="coolv"></span></div>
+  <div class="row"><span>最大实例数</span><input type="range" id="max" min="2" max="12" value="8"><span class="mono" id="maxv"></span></div>
+</div>
+<div class="row"><button class="main" id="play">播放一天</button><button id="inst">直接看结果</button></div>
+<div class="legend"><span><i style="background:#90a4ae"></i>负载</span><span><i style="background:#e53935"></i>CPU 利用率</span><span><i style="background:#3f51b5"></i>实例数</span><span><i style="background:#ffb74d"></i>阈值</span></div>
+<svg id="chart" viewBox="0 0 640 250"></svg>
+<div class="stats">
+  <div class="box">实例·小时<b id="s1">—</b></div>
+  <div class="box">过载时长（CPU≥95%）<b id="s2">—</b></div>
+  <div class="box">伸缩次数<b id="s3">—</b></div>
+  <div class="box">固定 8 台的实例·小时<b>192</b></div>
+</div>
+<div class="msg" id="msg"></div>
+<script>
+(function () {
+  var STEPS = 144, CAP = 100;
+  // 负载：凌晨低、上午上升、中午小高峰、晚上 8 点大高峰，加一点固定的小波动
+  var LOAD = [];
+  for (var i = 0; i < STEPS; i++) {
+    var h = i / 6;
+    var v = 60 + 180 * Math.exp(-Math.pow((h - 12) / 1.8, 2)) + 520 * Math.exp(-Math.pow((h - 20.5) / 1.6, 2)) + 100 * Math.max(0, Math.sin((h - 6) / 12 * Math.PI));
+    v += 15 * Math.sin(i * 1.7) + 10 * Math.sin(i * 0.9);
+    LOAD.push(Math.max(20, v));
+  }
+  var svg = document.getElementById("chart"), timer = null;
+  function el(t, a, txt) { var e = document.createElementNS("http://www.w3.org/2000/svg", t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; }
+  function P() { return { up: +document.getElementById("up").value, down: +document.getElementById("down").value, cool: +document.getElementById("cool").value / 10, max: +document.getElementById("max").value }; }
+  function simulate(p) {
+    var n = 2, wait = 0, res = [], acts = 0;
+    for (var i = 0; i < STEPS; i++) {
+      var cpu = Math.min(100, LOAD[i] / (n * CAP) * 100);
+      res.push({ n: n, cpu: cpu });
+      if (wait > 0) { wait--; continue; }
+      if (cpu > p.up && n < p.max) { n++; acts++; wait = p.cool; }
+      else if (cpu < p.down && n > 1) { n--; acts++; wait = p.cool; }
+    }
+    return { res: res, acts: acts };
+  }
+  var L = 40, R = 600, T = 10, B = 215;
+  function x(i) { return L + (R - L) * i / (STEPS - 1); }
+  function yc(v) { return B - v / 100 * (B - T); }
+  function yn(n, mx) { return B - n / mx * (B - T); }
+  function draw(upto) {
+    var p = P(), sim = simulate(p), mx = Math.max(12, p.max);
+    svg.innerHTML = "";
+    [0, 25, 50, 75, 100].forEach(function (g) { el("line", { x1: L, x2: R, y1: yc(g), y2: yc(g), stroke: "#eceff1" }); el("text", { x: L - 4, y: yc(g) + 4, "text-anchor": "end", "font-size": 10, fill: "#e53935" }, g + "%"); });
+    for (var g = 0; g <= mx; g += 3) el("text", { x: R + 4, y: yn(g, mx) + 4, "font-size": 10, fill: "#3f51b5" }, g + " 台");
+    for (var hh = 0; hh <= 24; hh += 4) el("text", { x: x(Math.min(STEPS - 1, hh * 6)), y: B + 16, "text-anchor": "middle", "font-size": 10, fill: "#78909c" }, hh + "时");
+    var maxLoad = 1200;
+    el("path", { d: LOAD.slice(0, upto).map(function (v, i) { return (i ? "L" : "M") + x(i) + " " + (B - v / maxLoad * (B - T)); }).join(" "), fill: "none", stroke: "#cfd8dc", "stroke-width": 2 });
+    el("line", { x1: L, x2: R, y1: yc(p.up), y2: yc(p.up), stroke: "#ffb74d", "stroke-dasharray": "4 3" });
+    el("line", { x1: L, x2: R, y1: yc(p.down), y2: yc(p.down), stroke: "#ffb74d", "stroke-dasharray": "4 3" });
+    var r = sim.res.slice(0, upto);
+    el("path", { d: r.map(function (s, i) { return (i ? "L" : "M") + x(i) + " " + yc(s.cpu); }).join(" "), fill: "none", stroke: "#e53935", "stroke-width": 1.6 });
+    el("path", { d: r.map(function (s, i) { return (i ? "L" + x(i) + " " + yn(r[i - 1].n, mx) + " L" : "M") + x(i) + " " + yn(s.n, mx); }).join(" "), fill: "none", stroke: "#3f51b5", "stroke-width": 2.5 });
+    if (upto >= STEPS) {
+      var ih = sim.res.reduce(function (a, s) { return a + s.n; }, 0) / 6, over = sim.res.filter(function (s) { return s.cpu >= 95; }).length * 10;
+      document.getElementById("s1").textContent = ih.toFixed(0);
+      document.getElementById("s2").textContent = over + " 分钟";
+      document.getElementById("s3").textContent = sim.acts + " 次";
+      var m = "比一直开 8 台节省了 " + Math.max(0, 100 - ih / 192 * 100).toFixed(0) + "% 的实例·小时。";
+      if (over > 30) m = "晚高峰过载了 " + over + " 分钟：最大实例数太小，或冷却时间太长、扩容跟不上。 " + m;
+      if (sim.acts > 40) m = "伸缩了 " + sim.acts + " 次，实例数像锯齿一样来回跳（“抖动”）：冷却时间太短或两个阈值太接近。 " + m;
+      if (p.up - p.down < 20) m += " 扩容阈值和缩容阈值至少要拉开一段距离。";
+      document.getElementById("msg").textContent = m;
+    } else { ["s1", "s2", "s3"].forEach(function (id) { document.getElementById(id).textContent = "…"; }); document.getElementById("msg").textContent = ""; }
+  }
+  function labels() { var p = P(); document.getElementById("upv").textContent = p.up + "%"; document.getElementById("downv").textContent = p.down + "%"; document.getElementById("coolv").textContent = p.cool * 10 + " 分钟"; document.getElementById("maxv").textContent = p.max + " 台"; }
+  ["up", "down", "cool", "max"].forEach(function (id) { document.getElementById(id).oninput = function () { clearInterval(timer); labels(); draw(STEPS); }; });
+  document.getElementById("play").onclick = function () { clearInterval(timer); var k = 1; timer = setInterval(function () { k += 3; draw(Math.min(STEPS, k)); if (k >= STEPS) clearInterval(timer); }, 40); };
+  document.getElementById("inst").onclick = function () { clearInterval(timer); draw(STEPS); };
+  labels(); draw(STEPS);
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

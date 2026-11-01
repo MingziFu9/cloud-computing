@@ -1,0 +1,21 @@
+# 实验 3-3：每次 push 或提交 Pull Request 时，自动安装依赖并运行测试
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安装依赖
+        run: pip install pytest
+      - name: 运行测试
+        run: pytest -v

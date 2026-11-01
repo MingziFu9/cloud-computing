@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI/CD 流水线</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.pipe { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:10px 0; }
+.st { border:2px solid #cfd8dc; border-radius:8px; padding:8px 4px; text-align:center; font-size:13px; background:#fafafa; min-width:0; }
+.st .ic { font-size:22px; display:block; height:28px; }
+.st .s { font-size:12px; color:#607d8b; display:block; margin-top:2px; }
+.st.run { border-color:#1e88e5; background:#e3f2fd; }
+.st.ok { border-color:#43a047; background:#e8f5e9; }
+.st.bad { border-color:#e53935; background:#ffebee; }
+.st.wait { border-color:#fb8c00; background:#fff3e0; }
+.st.skip { opacity:.45; }
+.grp { font-size:12px; color:#607d8b; display:grid; grid-template-columns:3fr 2fr; gap:6px; text-align:center; }
+.grp div { border-top:3px solid #90caf9; padding-top:2px; }
+.grp div + div { border-top-color:#ffcc80; }
+#log { background:#263238; color:#eceff1; font:12.5px/1.6 Consolas,monospace; padding:8px 10px; border-radius:6px; height:170px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; }
+#log .e { color:#ff8a80; } #log .g { color:#b9f6ca; } #log .y { color:#ffe57f; }
+label.ck { font-size:13.5px; display:inline-flex; align-items:center; gap:4px; }
+@media (max-width:620px) { .st { font-size:11.5px; padding:6px 2px; } .st .ic { font-size:18px; height:22px; } .st .s { font-size:10.5px; } }
+</style>
+</head>
+<body>
+<h1>CI/CD 流水线：代码提交后自动走完的五个阶段</h1>
+<div class="sub">示例项目就是实验 3-3 的“云服务器费用计算”程序。前三步属于<b>持续集成（CI）</b>，后两步属于<b>持续交付/部署（CD）</b>。任何一步失败，流水线立即停下，有问题的代码不会进入生产环境。</div>
+<div class="row">
+  <button class="main" id="good">提交正确代码</button>
+  <button id="bad">提交有错误的代码</button>
+  <label class="ck"><input type="checkbox" id="approve">生产部署需人工审批</label>
+</div>
+<div class="pipe" id="pipe"></div>
+<div class="grp"><div>持续集成 CI</div><div>持续交付 / 持续部署 CD</div></div>
+<div class="row" id="apprRow" style="display:none"><button class="main" id="yes">批准上线</button><button id="no">拒绝</button></div>
+<div id="log"></div>
+<div class="msg" id="msg">点上面的按钮提交一次代码。</div>
+<script>
+(function () {
+  var NAMES = ["提交代码", "构建", "单元测试", "部署测试环境", "部署生产环境"];
+  var ICON = { idle: "○", run: "⏳", ok: "✔", bad: "✘", wait: "✋", skip: "—" };
+  var TXT = { idle: "等待", run: "运行中", ok: "成功", bad: "失败", wait: "待审批", skip: "未执行" };
+  var pipe = document.getElementById("pipe"), log = document.getElementById("log"), msg = document.getElementById("msg");
+  var apprRow = document.getElementById("apprRow"), timers = [], no = 0, busy = false, pending = null;
+  var boxes = NAMES.map(function (n) { var d = document.createElement("div"); d.className = "st"; pipe.appendChild(d); return { d: d, n: n }; });
+  function set(i, s) { boxes[i].d.className = "st " + s; boxes[i].d.innerHTML = '<span class="ic">' + ICON[s] + '</span>' + boxes[i].n + '<span class="s">' + TXT[s] + '</span>'; }
+  function reset() { for (var i = 0; i < 5; i++) set(i, "idle"); log.innerHTML = ""; }
+  function L(t, c) { var s = document.createElement("div"); if (c) s.className = c; s.textContent = t; log.appendChild(s); log.scrollTop = log.scrollHeight; }
+  function lock(b) { busy = b; document.getElementById("good").disabled = b; document.getElementById("bad").disabled = b; document.getElementById("approve").disabled = b; }
+  function later(ms, f) { timers.push(setTimeout(f, ms)); }
+  // 每个阶段：日志行（[文字, 颜色]）
+  function steps(good) {
+    return [
+      [["$ git push origin main", ""], [good ? "提交 #" + no + "：修正按量付费计算的四舍五入" : "提交 #" + no + "：把月费改成“单价×时长”（漏乘了天数）", ""], ["触发流水线 ✔", "g"]],
+      [["$ pip install -r requirements.txt", ""], ["Successfully installed pytest", ""], ["$ python -m py_compile price.py", ""], ["构建完成，生成制品 price-app-" + no + ".zip", "g"]],
+      good ? [["$ pytest -q", ""], ["...", ""], ["3 passed", "g"]]
+           : [["$ pytest -q", ""], ["F..", "e"], ["FAILED test_price.py::test_monthly_cost", "e"], ["assert 12.0 == 360.0", "e"], ["1 failed, 2 passed", "e"]],
+      [["部署到测试环境 test.example.com", ""], ["健康检查 HTTP 200 ✔", "g"], ["自动化接口测试 12/12 通过", "g"]],
+      [["灰度发布：先替换 1/4 的实例 ……", ""], ["全部实例已更新为版本 #" + no, "g"]]
+    ];
+  }
+  function runStage(i, plan, good) {
+    if (i === 4 && document.getElementById("approve").checked) {
+      set(4, "wait"); L("等待负责人审批生产发布……", "y");
+      msg.innerHTML = "测试环境已就绪，代码<b>随时可以发布</b>，但上线要人点头：这就是<b>持续交付</b>。";
+      apprRow.style.display = ""; pending = plan; return;
+    }
+    set(i, "run");
+    var lines = plan[i], t = 0;
+    lines.forEach(function (ln) { t += 450; later(t, function () { L(ln[0], ln[1]); }); });
+    later(t + 350, function () {
+      if (i === 2 && !good) {
+        set(2, "bad"); set(3, "skip"); set(4, "skip");
+        L("流水线失败，已通知提交者，后续阶段不执行。", "e");
+        msg.innerHTML = "单元测试发现了错误，流水线在第 3 步<b>停下</b>：有问题的代码不会被部署。修好再提交即可。这就是<b>持续集成</b>的价值：错误在几分钟内被发现。";
+        lock(false); return;
+      }
+      set(i, "ok");
+      if (i < 4) runStage(i + 1, plan, good);
+      else finish();
+    });
+  }
+  function finish() {
+    L("流水线成功 ✔", "g"); lock(false);
+    msg.innerHTML = document.getElementById("approve").checked
+      ? "审批通过后才上线：<b>持续交付</b>（Continuous Delivery），适合需要人把关的业务。"
+      : "没有人工环节，测试通过就自动上线：<b>持续部署</b>（Continuous Deployment）。勾选“生产部署需人工审批”再提交一次对比。";
+  }
+  function start(good) {
+    if (busy) return;
+    timers.forEach(clearTimeout); timers = []; no++; reset(); lock(true); apprRow.style.display = "none";
+    msg.textContent = "流水线运行中……";
+    set(0, "run"); runStage(0, steps(good), good);
+  }
+  document.getElementById("good").onclick = function () { start(true); };
+  document.getElementById("bad").onclick = function () { start(false); };
+  document.getElementById("yes").onclick = function () {
+    apprRow.style.display = "none"; L("负责人已批准", "g");
+    var plan = pending; set(4, "run"); var t = 0;
+    plan[4].forEach(function (ln) { t += 450; later(t, function () { L(ln[0], ln[1]); }); });
+    later(t + 350, function () { set(4, "ok"); finish(); });
+  };
+  document.getElementById("no").onclick = function () {
+    apprRow.style.display = "none"; set(4, "skip"); L("负责人拒绝发布，本次版本停留在测试环境。", "y"); lock(false);
+    msg.innerHTML = "生产环境保持原版本不变。持续交付保证代码<b>随时能发布</b>，但发不发由人决定。";
+  };
+  reset();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

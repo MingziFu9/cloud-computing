@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>云服务费用计算器</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.barrow { grid-template-columns:7.5em 1fr 6.5em; }
+.bar.b2 { background:#00897b; } .bar.b3 { background:#ef6c00; }
+.rec { font-size:15px; font-weight:bold; }
+</style>
+</head>
+<body>
+<h1>云服务费用计算器：按量、包月还是抢占式？</h1>
+<div class="sub">价格为示意值（同一配置下三种方式的比例接近常见公有云），用来理解计费规律；真实价格请用云厂商的价格计算器查询。</div>
+<div class="row"><span>配置</span><select id="spec"><option value="0">2 核 4 GB</option><option value="1" selected>4 核 8 GB</option><option value="2">8 核 16 GB</option></select></div>
+<div class="row"><span>每天运行</span><input type="range" id="hours" min="1" max="24" value="8"><span class="mono" id="hv"></span></div>
+<div class="row"><span>使用月数</span><input type="range" id="months" min="1" max="36" value="3"><span class="mono" id="mv"></span></div>
+<div class="row"><label><input type="checkbox" id="intr"> 任务可以被中断（如离线转码、批量计算）</label></div>
+<div class="box">
+  <h2>平均每月费用</h2>
+  <div class="barrow"><span>按量付费</span><div><div class="bar" id="b1"></div></div><span class="v" id="v1"></span></div>
+  <div class="barrow"><span>包年包月</span><div><div class="bar b2" id="b2"></div></div><span class="v" id="v2"></span></div>
+  <div class="barrow"><span>抢占式实例</span><div><div class="bar b3" id="b3"></div></div><span class="v" id="v3"></span></div>
+  <div class="note" id="be"></div>
+</div>
+<div class="msg rec" id="rec"></div>
+<div class="msg" id="why"></div>
+<script>
+(function () {
+  var HOURLY = [0.4, 0.8, 1.6], MONTHLY = [120, 240, 480], SPOT = 0.2;   // 示意价格：元/小时、元/月、抢占式约为按量价格的 2 折
+  function render() {
+    var s = +document.getElementById("spec").value, h = +document.getElementById("hours").value, m = +document.getElementById("months").value, intr = document.getElementById("intr").checked;
+    document.getElementById("hv").textContent = h + " 小时";
+    document.getElementById("mv").textContent = m + " 个月";
+    var od = HOURLY[s] * h * 30;
+    var sub = m >= 12 ? MONTHLY[s] * 10 / 12 : MONTHLY[s];                  // 包年：按“付 10 个月得 12 个月”示意
+    var spot = HOURLY[s] * SPOT * h * 30;
+    var max = Math.max(od, sub, spot);
+    [[od, "1"], [sub, "2"], [spot, "3"]].forEach(function (x) { document.getElementById("b" + x[1]).style.width = (x[0] / max * 100) + "%"; document.getElementById("v" + x[1]).textContent = x[0].toFixed(0) + " 元"; });
+    document.getElementById("v3").textContent = intr ? spot.toFixed(0) + " 元" : spot.toFixed(0) + " 元（不适用）";
+    var beH = (sub / (HOURLY[s] * 30));
+    document.getElementById("be").textContent = "盈亏平衡点：每天运行约 " + beH.toFixed(1) + " 小时时，按量付费和包年包月一样贵；超过它，包年包月更划算。" + (m >= 12 ? "（已按包年优惠计算）" : "");
+    var best, why;
+    if (intr && spot < Math.min(od, sub)) { best = "推荐：抢占式实例"; why = "任务能接受中断，抢占式实例只要按量价格的约 2 折。被回收时程序要能保存进度、稍后重试。"; }
+    else if (od <= sub) { best = "推荐：按量付费"; why = "每天只运行 " + h + " 小时，按量付费用多少付多少，比包年包月省 " + (sub - od).toFixed(0) + " 元/月。记得不用时停机或释放。"; }
+    else { best = "推荐：包年包月" + (m >= 12 ? "（包年）" : ""); why = "每天运行 " + h + " 小时，接近全天在线，包年包月比按量付费省 " + (od - sub).toFixed(0) + " 元/月。" + (m < 12 ? "如果确定要用一年以上，选包年还能更便宜。" : ""); }
+    if (!intr) why += "（核心业务不建议用抢占式实例，它可能被随时回收。）";
+    document.getElementById("rec").textContent = best;
+    document.getElementById("why").textContent = why;
+  }
+  ["spec", "hours", "months", "intr"].forEach(function (id) { document.getElementById(id).oninput = render; document.getElementById(id).onchange = render; });
+  render();
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>
