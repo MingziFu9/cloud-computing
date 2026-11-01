@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kubernetes 自愈与扩缩容</title>
+<link rel="stylesheet" href="../common/sim.css">
+<style>
+.nodes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:8px 0; }
+.node { border:2px solid #90caf9; border-radius:8px; padding:6px; min-height:132px; background:#f5f9ff; position:relative; }
+.node.down { border-color:#e57373; background:#fbe9e7; opacity:.75; }
+.node .t { font-size:13px; font-weight:bold; color:#1565c0; display:flex; justify-content:space-between; align-items:center; gap:4px; }
+.node.down .t { color:#c62828; }
+.node .t button { font-size:11.5px; padding:2px 6px; }
+.pods { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.pod { width:54px; height:40px; border-radius:6px; background:#43a047; color:#fff; font:11px/1.2 Consolas,monospace; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:transform .2s; }
+.pod.v2 { background:#5e35b1; }
+.pod.new { background:#fdd835; color:#5d4037; }
+.pod.dead { background:#b0bec5; text-decoration:line-through; }
+.pod.hit { transform:scale(1.15); box-shadow:0 0 0 3px #ffb300; }
+.pod small { font-size:10px; opacity:.9; }
+.st { display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px; margin:4px 0; }
+.st b { font-size:16px; }
+#log { background:#263238; color:#eceff1; font:12px/1.55 Consolas,monospace; padding:6px 10px; border-radius:6px; height:120px; overflow-y:auto; white-space:pre-wrap; }
+#log .w { color:#ffab91; } #log .g { color:#b9f6ca; }
+@media (max-width:620px) { .pod { width:44px; height:36px; font-size:10px; } .node .t { flex-direction:column; align-items:flex-start; } }
+</style>
+</head>
+<body>
+<h1>Kubernetes 自愈与扩缩容：你说要几个，它就保持几个</h1>
+<div class="sub">Deployment 声明“期望副本数”，控制器每秒检查一次实际运行的 Pod 数，少了就补、多了就删。点一个绿色的 Pod 可以把它“弄坏”，或者关掉一整台节点，看看会发生什么。</div>
+<div class="row"><span>期望副本数 replicas</span><input type="range" id="rep" min="1" max="9" value="3"><b class="mono" id="repv">3</b></div>
+<div class="row"><button class="main" id="req">发送 6 个请求</button><button id="upd">升级到 v2（滚动更新）</button><button id="reset">重置</button></div>
+<div class="nodes" id="nodes"></div>
+<div class="st"><span>期望 <b id="sD">3</b></span><span>就绪 <b id="sR">0</b></span><span>启动中 <b id="sN">0</b></span><span>可用节点 <b id="sK">3</b></span></div>
+<div id="log"></div>
+<div class="msg" id="msg">拖动滑块改变副本数，或点击 Pod 模拟容器崩溃。</div>
+<script>
+(function () {
+  var nodes = [{ name: "node-1", up: true }, { name: "node-2", up: true }, { name: "node-3", up: true }];
+  var pods = [], seq = 0, ver = 1, tick = 0, rr = 0;
+  var box = document.getElementById("nodes"), log = document.getElementById("log"), msg = document.getElementById("msg");
+  function L(t, c) { var d = document.createElement("div"); if (c) d.className = c; d.textContent = "[" + String(tick).padStart(3, "0") + "s] " + t; log.appendChild(d); log.scrollTop = log.scrollHeight; }
+  function want() { return +document.getElementById("rep").value; }
+  function id() { seq++; return "web-" + (Math.random().toString(36).slice(2, 5)); }
+  function live() { return pods.filter(function (p) { return p.state !== "dead"; }); }
+  function pickNode() {
+    var best = -1, cnt = 1e9;
+    nodes.forEach(function (n, i) { if (!n.up) return; var c = live().filter(function (p) { return p.node === i; }).length; if (c < cnt) { cnt = c; best = i; } });
+    return best;
+  }
+  function create(v) {
+    var n = pickNode(); if (n < 0) { L("没有可用节点，Pod 无法调度（Pending）", "w"); return false; }
+    var p = { id: id(), node: n, state: "new", age: 0, v: v || ver }; pods.push(p);
+    L("创建 Pod " + p.id + "（v" + p.v + "）→ 调度到 " + nodes[n].name);
+    return true;
+  }
+  function control() {
+    tick++;
+    pods.forEach(function (p) { if (p.state === "new" && ++p.age >= 2) { p.state = "ok"; L("Pod " + p.id + " 就绪", "g"); } if (p.state === "dead") p.gone = (p.gone || 0) + 1; });
+    pods = pods.filter(function (p) { return !(p.state === "dead" && p.gone > 1); });
+    var lv = live(), w = want();
+    // 滚动更新：每次替换一个旧版本，且保证就绪数不少于期望数
+    var old = lv.filter(function (p) { return p.v < ver; });
+    if (old.length) {
+      var starting = lv.filter(function (p) { return p.state === "new"; }).length;
+      if (starting === 0 && lv.length <= w) create(ver);   // 先多起一个新版本
+      else if (starting === 0) { var o = old[0]; o.state = "dead"; L("滚动更新：新 Pod 已就绪，删除旧版本 Pod " + o.id); }
+      if (!live().filter(function (p) { return p.v < ver; }).length) L("滚动更新完成，全部为 v" + ver, "g");
+    } else if (lv.length < w) {
+      L("实际 " + lv.length + " 个 < 期望 " + w + " 个，开始补齐", "w");
+      for (var i = lv.length; i < w; i++) if (!create()) break;
+    } else if (lv.length > w) {
+      L("实际 " + lv.length + " 个 > 期望 " + w + " 个，删除多余的 Pod");
+      lv.slice(w).forEach(function (p) { p.state = "dead"; });
+    }
+    if (old.length && !live().filter(function (p) { return p.v < ver; }).length) { msg.innerHTML = "滚动更新完成：一次只替换一个 Pod，新 Pod 就绪后才删旧的，整个过程中服务一直可用。"; }
+    render();
+  }
+  function render() {
+    box.innerHTML = "";
+    nodes.forEach(function (n, i) {
+      var d = document.createElement("div"); d.className = "node" + (n.up ? "" : " down");
+      d.innerHTML = '<div class="t"><span>' + n.name + (n.up ? "" : "（宕机）") + '</span><button data-n="' + i + '">' + (n.up ? "关闭节点" : "恢复节点") + '</button></div><div class="pods"></div>';
+      var ps = d.querySelector(".pods");
+      pods.filter(function (p) { return p.node === i; }).forEach(function (p) {
+        var e = document.createElement("div");
+        e.className = "pod" + (p.state === "new" ? " new" : p.state === "dead" ? " dead" : p.v > 1 ? " v2" : "");
+        e.innerHTML = p.id + "<small>" + (p.state === "new" ? "启动中" : p.state === "dead" ? "已终止" : "v" + p.v) + "</small>";
+        e.title = "点击模拟容器崩溃"; e.dataset.id = p.id; ps.appendChild(e);
+      });
+      box.appendChild(d);
+    });
+    var lv = live();
+    document.getElementById("sD").textContent = want();
+    document.getElementById("sR").textContent = lv.filter(function (p) { return p.state === "ok"; }).length;
+    document.getElementById("sN").textContent = lv.filter(function (p) { return p.state === "new"; }).length;
+    document.getElementById("sK").textContent = nodes.filter(function (n) { return n.up; }).length;
+  }
+  box.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (b) { var n = nodes[+b.dataset.n]; n.up = !n.up;
+      if (!n.up) { var k = 0; pods.forEach(function (p) { if (p.node === +b.dataset.n && p.state !== "dead") { p.state = "dead"; k++; } });
+        L(n.name + " 宕机，上面的 " + k + " 个 Pod 全部失联", "w");
+        msg.innerHTML = "一台节点宕机，控制器发现 Pod 少了，会在<b>其他健康节点</b>上重新创建，不需要人工处理。"; }
+      else { L(n.name + " 恢复，重新加入集群", "g"); msg.innerHTML = "节点恢复后，新的 Pod 会优先调度到 Pod 较少的节点上。已经运行的 Pod 不会自动搬回来。"; }
+      render(); return; }
+    var e = ev.target.closest(".pod");
+    if (e) { var p = pods.find(function (x) { return x.id === e.dataset.id; });
+      if (p && p.state === "ok") { p.state = "dead"; L("Pod " + p.id + " 崩溃（容器进程退出）", "w");
+        msg.innerHTML = "Pod 崩溃后，控制器在 1 秒内发现“实际数少于期望数”，立即创建新的 Pod 补上：这就是 Kubernetes 的<b>自愈</b>。"; render(); } }
+  });
+  document.getElementById("rep").oninput = function () {
+    document.getElementById("repv").textContent = this.value;
+    msg.innerHTML = "相当于执行 <code>kubectl scale deployment web --replicas=" + this.value + "</code>：只需改一个数字，控制器负责把实际状态调整到期望状态。"; render();
+  };
+  document.getElementById("req").onclick = function () {
+    var ok = live().filter(function (p) { return p.state === "ok"; });
+    if (!ok.length) { L("Service 后面没有就绪的 Pod，请求失败（503）", "w"); return; }
+    var i = 0, used = {};
+    (function next() { if (i >= 6) { msg.innerHTML = "Service 把 6 个请求轮流分给 " + Object.keys(used).length + " 个就绪的 Pod：这就是<b>负载均衡</b>。启动中的 Pod 不会收到请求。"; return; }
+      var p = ok[rr++ % ok.length]; used[p.id] = 1; L("请求 " + (i + 1) + " → Service → " + p.id);
+      var e = box.querySelector('[data-id="' + p.id + '"]'); if (e) { e.classList.add("hit"); setTimeout(function () { e.classList.remove("hit"); }, 300); }
+      i++; setTimeout(next, 350); })();
+  };
+  document.getElementById("upd").onclick = function () {
+    if (ver > 1) { msg.textContent = "已经是 v2 了，点“重置”可以重新开始。"; return; }
+    ver = 2; L("kubectl set image deployment/web web=myapp:v2", "g");
+    msg.innerHTML = "开始<b>滚动更新</b>：先启动一个 v2 的新 Pod，就绪后再删一个 v1 的旧 Pod，如此反复。";
+  };
+  document.getElementById("reset").onclick = function () {
+    nodes.forEach(function (n) { n.up = true; }); pods = []; ver = 1; tick = 0; log.innerHTML = "";
+    document.getElementById("rep").value = 3; document.getElementById("repv").textContent = 3;
+    msg.textContent = "拖动滑块改变副本数，或点击 Pod 模拟容器崩溃。"; render();
+  };
+  render();
+  setInterval(control, 1000);
+})();
+</script>
+<script src="../common/sim.js"></script>
+</body>
+</html>

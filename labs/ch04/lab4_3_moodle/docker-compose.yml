@@ -1,0 +1,40 @@
+# 实验 4-3：用 Docker Compose 一键部署 Moodle 在线教学平台（对应本章实训活动）
+# 两个容器：mariadb 保存课程、用户等数据；moodle 是网站本身（Apache + PHP + Moodle）
+services:
+  mariadb:
+    image: bitnamilegacy/mariadb:11.4
+    environment:
+      - MARIADB_ROOT_PASSWORD=Root@2026
+      - MARIADB_DATABASE=moodle
+      - MARIADB_USER=moodle
+      - MARIADB_PASSWORD=Moodle@2026
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+    volumes:
+      - mariadb-data:/bitnami/mariadb
+
+  moodle:
+    image: bitnamilegacy/moodle:4.5
+    ports:
+      - "8080:8080"
+    environment:
+      - MOODLE_DATABASE_TYPE=mariadb
+      - MOODLE_DATABASE_HOST=mariadb
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_USER=moodle
+      - MOODLE_DATABASE_PASSWORD=Moodle@2026
+      - MOODLE_USERNAME=admin
+      - MOODLE_PASSWORD=Admin@2026
+      - MOODLE_EMAIL=admin@example.com
+      - MOODLE_SITE_NAME=云计算课程平台
+    volumes:
+      - moodle-data:/bitnami/moodle
+      - moodledata-data:/bitnami/moodledata
+    depends_on:
+      - mariadb
+
+volumes:
+  mariadb-data:
+  moodle-data:
+  moodledata-data:
