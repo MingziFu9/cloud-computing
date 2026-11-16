@@ -11,6 +11,22 @@
     2 学分 · 36 学时（理论 28 学时 + 实验 8 学时） · 第 3 学期 · 5 章 · 13 个实验 · 期末闭卷
 <!-- course:end -->
 
+<!-- showcase:start -->
+## 先玩一玩
+
+<p class="sc-tagline">把服务器、存储和网络像水电一样按需取用</p>
+
+<div class="showcase" aria-label="精选交互动画">
+<ol class="sc-list">
+<li data-sim="sims/website-on-cloud/main.html" data-video="assets/showcase/website-on-cloud" data-title="云上网站的一次访问" data-play="勾选配置项，看访问在哪一步走不通。"><img src="assets/showcase/website-on-cloud.jpg" alt="云上网站的一次访问截图" loading="lazy"><p class="sc-hook">从域名到数据库，云上网站要配齐哪些零件？</p><p><b>云上网站的一次访问</b>　勾选配置项，看访问在哪一步走不通。</p><p><a href="sims/website-on-cloud/main.html">打开动画</a>　<a class="sc-chap" href="chapters/04-applications/4-1/" title="第 4 章 云计算应用与实践">去读第4章 →</a></p></li>
+<li data-sim="sims/k8s-self-healing/main.html" data-video="assets/showcase/k8s-self-healing" data-title="Kubernetes 自愈与扩缩容" data-play="发请求、滚动升级、关节点，都能试。"><img src="assets/showcase/k8s-self-healing.jpg" alt="Kubernetes 自愈与扩缩容截图" loading="lazy"><p class="sc-hook">关掉一台节点，应用自己“复活”了</p><p><b>Kubernetes 自愈与扩缩容</b>　发请求、滚动升级、关节点，都能试。</p><p><a href="sims/k8s-self-healing/main.html">打开动画</a>　<a class="sc-chap" href="chapters/04-applications/4-1/" title="第 4 章 云计算应用与实践">去读第4章 →</a></p></li>
+<li data-sim="sims/elastic-billing/main.html" data-video="assets/showcase/elastic-billing" data-title="按需付费与弹性伸缩" data-play="自建机房和上云的每日成本对比。"><img src="assets/showcase/elastic-billing.jpg" alt="按需付费与弹性伸缩截图" loading="lazy"><p class="sc-hook">流量高峰来了，服务器会自己变多吗？</p><p><b>按需付费与弹性伸缩</b>　自建机房和上云的每日成本对比。</p><p><a href="sims/elastic-billing/main.html">打开动画</a>　<a class="sc-chap" href="chapters/01-cloud-basics/1-1/" title="第 1 章 云计算基础">去读第1章 →</a></p></li>
+<li data-sim="sims/vm-vs-container/main.html" data-video="assets/showcase/vm-vs-container" data-title="虚拟机与容器对比" data-play="启动时间和内存占用并排比较。"><img src="assets/showcase/vm-vs-container.jpg" alt="虚拟机与容器对比截图" loading="lazy"><p class="sc-hook">同样跑 3 个应用，容器为什么快这么多？</p><p><b>虚拟机与容器对比</b>　启动时间和内存占用并排比较。</p><p><a href="sims/vm-vs-container/main.html">打开动画</a>　<a class="sc-chap" href="chapters/02-core-technologies/2-1/" title="第 2 章 云计算核心技术">去读第2章 →</a></p></li>
+<li data-sim="sims/serverless-billing/main.html" data-video="assets/showcase/serverless-billing" data-title="Serverless 与云服务器费用对比" data-play="两条费用曲线在临界点交叉。"><img src="assets/showcase/serverless-billing.jpg" alt="Serverless 与云服务器费用对比截图" loading="lazy"><p class="sc-hook">每天多少次请求，Serverless 才划算？</p><p><b>Serverless 与云服务器费用对比</b>　两条费用曲线在临界点交叉。</p><p><a href="sims/serverless-billing/main.html">打开动画</a>　<a class="sc-chap" href="chapters/05-trends-careers/5-1/" title="第 5 章 未来趋势与职业发展">去读第5章 →</a></p></li>
+</ol>
+</div>
+<!-- showcase:end -->
+
 ## 这本书讲什么
 
 我们每天用的网盘、在线文档、外卖和打车软件，背后几乎都跑在“云”上。云计算把服务器、存储和网络变成像水电一样按需取用、按量付费的服务，企业不必自建机房，个人也能随时租到一台服务器。

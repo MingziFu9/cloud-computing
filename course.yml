@@ -99,3 +99,51 @@ lesson_plan:
   online_ratio: 0.75
   teacher: ""
   school: 广州开放大学
+
+# 首页“先玩一玩”轮播：按轮播顺序写，第 1 个放画面最震撼的。sim 是 docs/sims/ 下的目录名，hook 是一句问句，play 是一句玩法；
+# steps 是录短视频时自动做的操作（写法见 编写规范.md“首页轮播”）。改完运行 python tools/showcase.py record 重录视频。
+showcase_tagline: "把服务器、存储和网络像水电一样按需取用"
+showcase:
+  - sim: website-on-cloud
+    hook: "从域名到数据库，云上网站要配齐哪些零件？"
+    play: "勾选配置项，看访问在哪一步走不通。"
+    steps:
+      - ["click", "input[type=checkbox] >> nth=0", {"hold": 0.4}]
+      - ["click", "input[type=checkbox] >> nth=1", {"hold": 0.4}]
+      - ["click", "input[type=checkbox] >> nth=2", {"hold": 0.4}]
+      - ["click", "全部配好", {"hold": 0.5}]
+      - ["click", "访问网站", {"hold": 3}]
+      - ["poster"]
+  - sim: k8s-self-healing
+    hook: "关掉一台节点，应用自己“复活”了"
+    play: "发请求、滚动升级、关节点，都能试。"
+    vw: 860
+    steps:
+      - ["click", "发送 6 个请求", {"hold": 1.5}]
+      - ["click", "关闭节点", {"hold": 3}]
+      - ["poster"]
+      - ["click", "发送 6 个请求", {"hold": 1.5}]
+  - sim: elastic-billing
+    hook: "流量高峰来了，服务器会自己变多吗？"
+    play: "自建机房和上云的每日成本对比。"
+    steps:
+      - ["slide", "#peak", 12000, {"sec": 1.5, "hold": 1}]
+      - ["poster"]
+      - ["click", "input[type=checkbox]", {"hold": 1}]
+      - ["slide", "#peak", 3000, {"sec": 1.5, "hold": 1}]
+  - sim: vm-vs-container
+    hook: "同样跑 3 个应用，容器为什么快这么多？"
+    play: "启动时间和内存占用并排比较。"
+    vw: 900
+    steps:
+      - ["click", "启动 3 个应用", {"hold": 4.5}]
+      - ["poster"]
+  - sim: serverless-billing
+    hook: "每天多少次请求，Serverless 才划算？"
+    play: "两条费用曲线在临界点交叉。"
+    steps:
+      - ["click", "校园小程序", {"hold": 1}]
+      - ["click", "高流量电商接口", {"hold": 1.2}]
+      - ["poster"]
+      - ["slide", "#req", 5, {"hold": 1}]
+      - ["click", "个人博客评论接口", {"hold": 1}]
